@@ -6,15 +6,23 @@ import (
 	"syscall"
 
 	"github.com/keyneston/fscachemonitor/fscache"
+	"github.com/sirupsen/logrus"
 )
 
 func main() {
 	var filename string
 	var root string
+	var debug bool
 
 	flag.StringVar(&root, "r", "", "Root directory to monitor")
 	flag.StringVar(&filename, "f", "", "File to output to")
+	flag.BoolVar(&debug, "debug", false, "Set debug logging")
 	flag.Parse()
+
+	logrus.SetLevel(logrus.ErrorLevel)
+	if debug {
+		logrus.SetLevel(logrus.DebugLevel)
+	}
 
 	if root == "" {
 		log.Fatalf("Must specify root to watch")
@@ -42,8 +50,8 @@ func setLimits() error {
 		return err
 	}
 
-	limit.Cur = 99000
-	limit.Max = 99000
+	limit.Cur = 9999999
+	limit.Max = 9999999
 
 	if err := syscall.Setrlimit(syscall.RLIMIT_NOFILE, &limit); err != nil {
 		return err

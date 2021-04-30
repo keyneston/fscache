@@ -5,13 +5,15 @@ import (
 	"io"
 	"sort"
 	"sync"
+	"sync/atomic"
 )
 
 type empty struct{}
 
 type FSList struct {
-	mutex *sync.Mutex
-	list  map[string]empty
+	mutex   *sync.Mutex
+	list    map[string]empty
+	pending int64
 }
 
 func NewFSList() *FSList {
@@ -21,10 +23,15 @@ func NewFSList() *FSList {
 	}
 }
 
+func (fs *FSList) Pending() bool {
+	return atomic.LoadInt64(&fs.pending) == 1
+}
+
 func (fs *FSList) Add(name string) {
 	fs.mutex.Lock()
 	defer fs.mutex.Unlock()
 
+	atomic.StoreInt64(&fs.pending, 1)
 	fs.list[name] = empty{}
 }
 
@@ -32,11 +39,13 @@ func (fs *FSList) Delete(name string) {
 	fs.mutex.Lock()
 	defer fs.mutex.Unlock()
 
+	atomic.StoreInt64(&fs.pending, 1)
 	delete(fs.list, name)
 }
 
 func (fs *FSList) Write(w io.Writer) (int, error) {
 	fs.mutex.Lock()
+	atomic.StoreInt64(&fs.pending, 0)
 
 	l := make([]string, 0, len(fs.list))
 	for k := range fs.list {
@@ -49,7 +58,7 @@ func (fs *FSList) Write(w io.Writer) (int, error) {
 
 	sum := 0
 	for _, file := range l {
-		c, err := fmt.Println(w, file)
+		c, err := fmt.Fprintln(w, file)
 		sum += c
 		if err != nil {
 			return sum, err

@@ -5,9 +5,10 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
-	"sync/atomic"
+	"time"
 
-	"github.com/fsnotify/fsnotify"
+	"github.com/fsnotify/fsevents"
+	"github.com/sirupsen/logrus"
 )
 
 type FSCache struct {
@@ -15,62 +16,88 @@ type FSCache struct {
 	Root     string
 
 	fileList *FSList
-	watcher  *fsnotify.Watcher
-	watches  int64
-	limit    int
+	watcher  *fsevents.EventStream
+
+	limit int
 
 	closeCh   chan interface{}
 	closeOnce sync.Once
 }
 
 func New(filename, root string) (*FSCache, error) {
-	watcher, err := fsnotify.NewWatcher()
-	if err != nil {
-		return nil, err
-	}
-
 	return &FSCache{
 		Filename: filename,
 		Root:     root,
-		watcher:  watcher,
+		watcher: &fsevents.EventStream{
+			Paths:   []string{root},
+			Latency: time.Second,
+			Flags:   fsevents.WatchRoot | fsevents.FileEvents,
+		},
 		fileList: NewFSList(),
 		limit:    40000,
 	}, nil
 }
 
 func (fs *FSCache) Run() {
+	fs.watcher.Start()
 	fs.init()
+	ticker := time.NewTicker(time.Second)
 
 	for {
 		select {
-		case event := <-fs.watcher.Events:
-			fs.handleEvent(event)
-		case err := <-fs.watcher.Errors:
-			log.Printf("Error from watcher: %v", err)
+		case <-ticker.C:
+			fs.updateWritten()
+		case events := <-fs.watcher.Events:
+			for _, e := range events {
+				fs.handleEvent(e)
+			}
 		case <-fs.closeCh:
 			return
 		}
 	}
 }
 
-func (fs *FSCache) handleEvent(e fsnotify.Event) {
-	switch e.Op {
-	case fsnotify.Create:
-		fs.fileList.Add(e.Name)
-	case fsnotify.Write:
-		// pass
-	case fsnotify.Remove:
-		fs.fileList.Delete(e.Name)
-	case fsnotify.Rename:
-		fs.fileList.Delete(e.Name)
-	case fsnotify.Chmod:
-		// pass
+func (fs *FSCache) updateWritten() {
+	if !fs.fileList.Pending() {
+		return
 	}
+	logrus.Debugf("Pending updates, writing new cache")
+
+	f, err := os.OpenFile(fs.Filename, os.O_RDWR|os.O_TRUNC|os.O_CREATE, 0644)
+	if err != nil {
+		logrus.Errorf("Error: %v", err)
+		return
+	}
+	defer f.Close()
+	if _, err := fs.fileList.Write(f); err != nil {
+		logrus.Errorf("Error: %v", err)
+		return
+	}
+}
+
+func (fs *FSCache) handleEvent(e fsevents.Event) {
+	if skipFile(e.Path) {
+		log.Printf("Skipping %q", e.Path)
+		return
+	}
+
+	switch {
+	case checkFlag(e.Flags, fsevents.ItemRemoved):
+		logrus.Debugf("Removing %q", e.Path)
+		fs.fileList.Delete(e.Path)
+	case checkFlag(e.Flags, fsevents.ItemCreated):
+		logrus.Debugf("Adding %q", e.Path)
+		fs.fileList.Add(e.Path)
+	}
+}
+
+func checkFlag(flags, needle fsevents.EventFlags) bool {
+	return flags&needle == needle
 }
 
 func (fs *FSCache) Close() {
 	fs.closeOnce.Do(func() {
-		fs.watcher.Close()
+		fs.watcher.Stop()
 		close(fs.closeCh)
 	})
 }
@@ -79,8 +106,7 @@ func (fs *FSCache) Close() {
 func (fs *FSCache) init() {
 	filepath.WalkDir(fs.Root, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
-			log.Printf("Error during init (%d/%d): %v",
-				atomic.LoadInt64(&fs.watches), fs.limit, err)
+			log.Printf("Error during init: %v", err)
 		}
 
 		if skipFile(path) {
@@ -89,11 +115,6 @@ func (fs *FSCache) init() {
 		}
 
 		fs.fileList.Add(path)
-		if d.IsDir() {
-			atomic.AddInt64(&fs.watches, 1)
-			fs.watcher.Add(path)
-		}
-
 		return nil
 	})
 }
