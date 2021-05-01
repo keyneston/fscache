@@ -30,22 +30,30 @@ func (fs *FSList) Pending() bool {
 func (fs *FSList) Add(name string) {
 	fs.mutex.Lock()
 	defer fs.mutex.Unlock()
+	fs.setPending()
 
-	atomic.StoreInt64(&fs.pending, 1)
 	fs.list[name] = empty{}
+}
+
+func (fs *FSList) setPending() {
+	atomic.StoreInt64(&fs.pending, 1)
+}
+
+func (fs *FSList) clearPending() {
+	atomic.StoreInt64(&fs.pending, 0)
 }
 
 func (fs *FSList) Delete(name string) {
 	fs.mutex.Lock()
 	defer fs.mutex.Unlock()
 
-	atomic.StoreInt64(&fs.pending, 1)
+	fs.setPending()
 	delete(fs.list, name)
 }
 
 func (fs *FSList) Write(w io.Writer) (int, error) {
 	fs.mutex.Lock()
-	atomic.StoreInt64(&fs.pending, 0)
+	fs.clearPending()
 
 	l := make([]string, 0, len(fs.list))
 	for k := range fs.list {

@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/fsnotify/fsevents"
+	"github.com/keyneston/fscachemonitor/watcher"
 	"github.com/sirupsen/logrus"
 )
 
@@ -16,7 +16,7 @@ type FSCache struct {
 	Root     string
 
 	fileList *FSList
-	watcher  *fsevents.EventStream
+	watcher  watcher.Watcher
 
 	limit int
 
@@ -25,14 +25,15 @@ type FSCache struct {
 }
 
 func New(filename, root string) (*FSCache, error) {
+	watcher, err := watcher.New(root)
+	if err != nil {
+		return nil, err
+	}
+
 	return &FSCache{
 		Filename: filename,
 		Root:     root,
-		watcher: &fsevents.EventStream{
-			Paths:   []string{root},
-			Latency: time.Second,
-			Flags:   fsevents.WatchRoot | fsevents.FileEvents,
-		},
+		watcher:  watcher,
 		fileList: NewFSList(),
 		limit:    40000,
 	}, nil
@@ -47,7 +48,7 @@ func (fs *FSCache) Run() {
 		select {
 		case <-ticker.C:
 			fs.updateWritten()
-		case events := <-fs.watcher.Events:
+		case events := <-fs.watcher.Stream():
 			for _, e := range events {
 				fs.handleEvent(e)
 			}
@@ -75,24 +76,20 @@ func (fs *FSCache) updateWritten() {
 	}
 }
 
-func (fs *FSCache) handleEvent(e fsevents.Event) {
+func (fs *FSCache) handleEvent(e watcher.Event) {
 	if skipFile(e.Path) {
 		log.Printf("Skipping %q", e.Path)
 		return
 	}
 
-	switch {
-	case checkFlag(e.Flags, fsevents.ItemRemoved):
+	switch e.Type {
+	case watcher.EventTypeAdd:
 		logrus.Debugf("Removing %q", e.Path)
 		fs.fileList.Delete(e.Path)
-	case checkFlag(e.Flags, fsevents.ItemCreated):
+	case watcher.EventTypeDelete:
 		logrus.Debugf("Adding %q", e.Path)
 		fs.fileList.Add(e.Path)
 	}
-}
-
-func checkFlag(flags, needle fsevents.EventFlags) bool {
-	return flags&needle == needle
 }
 
 func (fs *FSCache) Close() {
