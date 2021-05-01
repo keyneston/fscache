@@ -1,45 +1,33 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"log"
+	"os"
 	"syscall"
 
-	"github.com/keyneston/fscachemonitor/fscache"
-	"github.com/sirupsen/logrus"
+	"github.com/google/subcommands"
+	"github.com/keyneston/fscachemonitor/cmds/run"
+	"github.com/keyneston/fscachemonitor/internal/shared"
 )
 
 func main() {
-	var filename string
-	var root string
-	var debug bool
+	sharedConf := &shared.Config{}
+	sharedConf.RegisterGlobal()
 
-	flag.StringVar(&root, "r", "", "Root directory to monitor")
-	flag.StringVar(&filename, "f", "", "File to output to")
-	flag.BoolVar(&debug, "debug", false, "Set debug logging")
+	subcommands.Register(subcommands.HelpCommand(), "")
+	subcommands.Register(subcommands.FlagsCommand(), "")
+	subcommands.Register(subcommands.CommandsCommand(), "")
+	subcommands.Register(&run.Command{Config: sharedConf}, "")
+
 	flag.Parse()
+	ctx := context.Background()
+	os.Exit(int(subcommands.Execute(ctx)))
 
-	logrus.SetLevel(logrus.ErrorLevel)
-	if debug {
-		logrus.SetLevel(logrus.DebugLevel)
-	}
-
-	if root == "" {
-		log.Fatalf("Must specify root to watch")
-	}
-	if filename == "" {
-		log.Fatalf("Must specify file to output cache to")
-	}
-
-	if err := setLimits(); err != nil {
-		log.Fatalf("Error updating limits: %v", err)
-	}
-
-	fs, err := fscache.New(filename, root)
-	if err != nil {
-		log.Fatalf("Error starting monitor: %v", err)
-	}
-	fs.Run()
+	//if err := setLimits(); err != nil {
+	//	log.Fatalf("Error updating limits: %v", err)
+	//}
 
 }
 
