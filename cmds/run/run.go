@@ -15,6 +15,7 @@ type Command struct {
 
 	root     string
 	filename string
+	sql      bool
 }
 
 func (*Command) Name() string     { return "run" }
@@ -31,6 +32,7 @@ func (c *Command) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&c.root, "root", "", "Alias for -r")
 	f.StringVar(&c.filename, "c", "", "File to output cache to")
 	f.StringVar(&c.filename, "cache", "", "Alias for -c")
+	f.BoolVar(&c.sql, "s", false, "Use SQLite3 backed file")
 }
 
 func (c *Command) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
@@ -42,7 +44,7 @@ func (c *Command) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) 
 		return shared.Exitf("Must specify file to output cache to")
 	}
 
-	fs, err := fscache.New(c.filename, c.root)
+	fs, err := fscache.New(c.filename, c.root, c.sql)
 	if err != nil {
 		log.Fatalf("Error starting monitor: %v", err)
 	}

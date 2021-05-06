@@ -7,7 +7,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/keyneston/fscachemonitor/fslist"
 	"github.com/keyneston/fscachemonitor/watcher"
+
 	"github.com/sirupsen/logrus"
 )
 
@@ -15,7 +17,7 @@ type FSCache struct {
 	Filename string
 	Root     string
 
-	fileList *FSList
+	fileList fslist.FSList
 	watcher  watcher.Watcher
 
 	limit int
@@ -24,19 +26,26 @@ type FSCache struct {
 	closeOnce sync.Once
 }
 
-func New(filename, root string) (*FSCache, error) {
+func New(filename, root string, sql bool) (*FSCache, error) {
 	watcher, err := watcher.New(root)
 	if err != nil {
 		return nil, err
 	}
 
-	return &FSCache{
+	fs := &FSCache{
 		Filename: filename,
 		Root:     root,
 		watcher:  watcher,
-		fileList: NewFSList(),
 		limit:    40000,
-	}, nil
+	}
+
+	if sql {
+		fs.fileList, err = fslist.NewSQL(filename)
+	} else {
+		fs.fileList, err = fslist.NewList(filename)
+	}
+
+	return fs, nil
 }
 
 func (fs *FSCache) Run() {
@@ -64,13 +73,7 @@ func (fs *FSCache) updateWritten() {
 	}
 	logrus.Debugf("Pending updates, writing new cache")
 
-	f, err := os.OpenFile(fs.Filename, os.O_RDWR|os.O_TRUNC|os.O_CREATE, 0644)
-	if err != nil {
-		logrus.Errorf("Error: %v", err)
-		return
-	}
-	defer f.Close()
-	if _, err := fs.fileList.Write(f); err != nil {
+	if err := fs.fileList.Write(); err != nil {
 		logrus.Errorf("Error: %v", err)
 		return
 	}

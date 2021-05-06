@@ -6,5 +6,6 @@ require (
 	github.com/fsnotify/fsevents v0.1.1 // indirect
 	github.com/fsnotify/fsnotify v1.4.9
 	github.com/google/subcommands v1.2.0 // indirect
+	github.com/mattn/go-sqlite3 v1.14.7 // indirect
 	github.com/sirupsen/logrus v1.6.0 // indirect
 )
