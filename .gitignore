@@ -1,2 +1,3 @@
 fscachemonitor
 test.cache
+*.sqlite

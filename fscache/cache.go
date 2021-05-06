@@ -44,6 +44,9 @@ func New(filename, root string, sql bool) (*FSCache, error) {
 	} else {
 		fs.fileList, err = fslist.NewList(filename)
 	}
+	if err != nil {
+		return nil, err
+	}
 
 	return fs, nil
 }
@@ -88,10 +91,14 @@ func (fs *FSCache) handleEvent(e watcher.Event) {
 	switch e.Type {
 	case watcher.EventTypeAdd:
 		logrus.Debugf("Removing %q", e.Path)
-		fs.fileList.Delete(e.Path)
+		if err := fs.fileList.Delete(e.Path); err != nil {
+			logrus.Errorf("Error adding file: %v", err)
+		}
 	case watcher.EventTypeDelete:
 		logrus.Debugf("Adding %q", e.Path)
-		fs.fileList.Add(e.Path)
+		if err := fs.fileList.Add(e.Path); err != nil {
+			logrus.Errorf("Error adding file: %v", err)
+		}
 	}
 }
 
