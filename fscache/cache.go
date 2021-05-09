@@ -89,14 +89,17 @@ func (fs *FSCache) handleEvent(e watcher.Event) {
 	}
 
 	switch e.Type {
-	case watcher.EventTypeAdd:
+	case watcher.EventTypeDelete:
 		logrus.Debugf("Removing %q", e.Path)
 		if err := fs.fileList.Delete(e.Path); err != nil {
-			logrus.Errorf("Error adding file: %v", err)
+			logrus.Errorf("Error deleting file: %v", err)
 		}
-	case watcher.EventTypeDelete:
+	case watcher.EventTypeAdd:
 		logrus.Debugf("Adding %q", e.Path)
-		if err := fs.fileList.Add(e.Path); err != nil {
+		if err := fs.fileList.Add(fslist.AddData{
+			Name:      e.Path,
+			UpdatedAt: time.Now(),
+		}); err != nil {
 			logrus.Errorf("Error adding file: %v", err)
 		}
 	}
@@ -121,7 +124,15 @@ func (fs *FSCache) init() {
 			return filepath.SkipDir
 		}
 
-		fs.fileList.Add(path)
+		info, err := d.Info()
+		if err != nil {
+			return err
+		}
+
+		fs.fileList.Add(fslist.AddData{
+			Name:      path,
+			UpdatedAt: info.ModTime(),
+		})
 		return nil
 	})
 }

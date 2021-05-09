@@ -31,12 +31,12 @@ func (fs *List) Pending() bool {
 	return atomic.LoadInt64(&fs.pending) == 1
 }
 
-func (fs *List) Add(name string) error {
+func (fs *List) Add(data AddData) error {
 	fs.mutex.Lock()
 	defer fs.mutex.Unlock()
 	fs.setPending()
 
-	fs.list[name] = empty{}
+	fs.list[data.Name] = empty{}
 
 	return nil
 }

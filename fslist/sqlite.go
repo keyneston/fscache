@@ -28,7 +28,7 @@ type SQList struct {
 
 func (s *SQList) init() error {
 	sqlStmt := `
-	CREATE TABLE IF NOT EXISTS files (filename TEXT PRIMARY KEY UNIQUE);
+	CREATE TABLE IF NOT EXISTS files (filename TEXT PRIMARY KEY UNIQUE, updated_at TIMESTAMP NOT NULL);
 	DELETE FROM files;
 	`
 	_, err := s.db.Exec(sqlStmt)
@@ -45,12 +45,12 @@ func (s *SQList) Pending() bool {
 	return false
 }
 
-func (s *SQList) Add(name string) error {
+func (s *SQList) Add(data AddData) error {
 	sqlStmt := `
-insert into files (filename) values ($1) ON CONFLICT(filename) DO NOTHING;
+insert into files (filename, updated_at) values ($1, $2) ON CONFLICT(filename) DO NOTHING;
 `
 
-	_, err := s.db.Exec(sqlStmt, name)
+	_, err := s.db.Exec(sqlStmt, data.Name, data.UpdatedAt)
 	return err
 }
 
