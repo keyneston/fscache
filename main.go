@@ -8,6 +8,7 @@ import (
 	"syscall"
 
 	"github.com/google/subcommands"
+	"github.com/keyneston/fscachemonitor/cmds/read"
 	"github.com/keyneston/fscachemonitor/cmds/run"
 	"github.com/keyneston/fscachemonitor/internal/shared"
 )
@@ -20,6 +21,7 @@ func main() {
 	subcommands.Register(subcommands.FlagsCommand(), "")
 	subcommands.Register(subcommands.CommandsCommand(), "")
 	subcommands.Register(&run.Command{Config: sharedConf}, "")
+	subcommands.Register(&read.Command{Config: sharedConf}, "")
 
 	flag.Parse()
 	ctx := context.Background()

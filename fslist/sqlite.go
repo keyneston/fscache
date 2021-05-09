@@ -3,6 +3,7 @@ package fslist
 import (
 	"database/sql"
 	"fmt"
+	"io"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -10,6 +11,16 @@ import (
 var _ FSList = &SQList{}
 
 func NewSQL(location string) (FSList, error) {
+	list, err := OpenSQL(location)
+	if err != nil {
+		return nil, err
+	}
+	s := list.(*SQList)
+
+	return s, s.init()
+}
+
+func OpenSQL(location string) (FSList, error) {
 	db, err := sql.Open("sqlite3", fmt.Sprintf("file:%s", location))
 	if err != nil {
 		return nil, fmt.Errorf("Error creating SQList: %w", err)
@@ -19,7 +30,7 @@ func NewSQL(location string) (FSList, error) {
 		db: db,
 	}
 
-	return s, s.init()
+	return s, nil
 }
 
 type SQList struct {
@@ -68,5 +79,32 @@ func (s *SQList) Len() int {
 
 func (s *SQList) Write() error {
 	// NOOP
+	return nil
+}
+
+func (s *SQList) Copy(w io.Writer, opts ReadOptions) error {
+	// sqlite interprets a negative limit as all rows
+	sqlStmt := `SELECT filename FROM files ORDER BY updated_at DESC LIMIT $1`
+
+	if opts.Limit == 0 {
+		opts.Limit = -1
+	}
+
+	rows, err := s.db.Query(sqlStmt, opts.Limit)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var filename string
+
+		if err := rows.Scan(&filename); err != nil {
+			return err
+		}
+
+		fmt.Fprintln(w, filename)
+	}
+
 	return nil
 }

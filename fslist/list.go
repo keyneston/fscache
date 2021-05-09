@@ -2,6 +2,7 @@ package fslist
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"sort"
 	"sync"
@@ -19,7 +20,7 @@ type List struct {
 	filename string
 }
 
-func NewList(filename string) (*List, error) {
+func NewList(filename string) (FSList, error) {
 	return &List{
 		mutex:    &sync.Mutex{},
 		list:     map[string]empty{},
@@ -27,8 +28,16 @@ func NewList(filename string) (*List, error) {
 	}, nil
 }
 
+func OpenList(filename string) (FSList, error) {
+	return nil, fmt.Errorf("Not yet implemented")
+}
+
 func (fs *List) Pending() bool {
 	return atomic.LoadInt64(&fs.pending) == 1
+}
+
+func (fs *List) Copy(w io.Writer, opts ReadOptions) error {
+	return nil
 }
 
 func (fs *List) Add(data AddData) error {

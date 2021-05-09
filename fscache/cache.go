@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -83,9 +84,12 @@ func (fs *FSCache) updateWritten() {
 }
 
 func (fs *FSCache) handleEvent(e watcher.Event) {
-	if skipFile(e.Path) {
-		log.Printf("Skipping %q", e.Path)
-		return
+	// TODO: find a better way:
+	for _, seg := range strings.Split(e.Path, "/") {
+		if skipFile(seg) {
+			log.Printf("Skipping %q", e.Path)
+			return
+		}
 	}
 
 	switch e.Type {
