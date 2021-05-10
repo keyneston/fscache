@@ -55,3 +55,9 @@ release:
 # 
 #     test: |
 #       system "#{bin}/mktable --h"
+
+builds:
+    goos:
+      - darwin
+        # Currently linux is blocked on having a watcher instance that works
+
