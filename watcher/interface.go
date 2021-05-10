@@ -13,6 +13,7 @@ const (
 type Event struct {
 	Path string
 	Type EventType
+	Dir  bool
 }
 
 type Watcher interface {

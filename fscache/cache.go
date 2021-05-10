@@ -17,6 +17,7 @@ import (
 type FSCache struct {
 	Filename string
 	Root     string
+	dirOnly  bool
 
 	fileList fslist.FSList
 	watcher  watcher.Watcher
@@ -27,7 +28,7 @@ type FSCache struct {
 	closeOnce sync.Once
 }
 
-func New(filename, root string, sql bool) (*FSCache, error) {
+func New(filename, root string, sql, dirOnly bool) (*FSCache, error) {
 	watcher, err := watcher.New(root)
 	if err != nil {
 		return nil, err
@@ -36,6 +37,7 @@ func New(filename, root string, sql bool) (*FSCache, error) {
 	fs := &FSCache{
 		Filename: filename,
 		Root:     root,
+		dirOnly:  dirOnly,
 		watcher:  watcher,
 		limit:    40000,
 	}
@@ -99,6 +101,10 @@ func (fs *FSCache) handleEvent(e watcher.Event) {
 			logrus.Errorf("Error deleting file: %v", err)
 		}
 	case watcher.EventTypeAdd:
+		if fs.dirOnly && !e.Dir {
+			return
+		}
+
 		logrus.Debugf("Adding %q", e.Path)
 		if err := fs.fileList.Add(fslist.AddData{
 			Name:      e.Path,

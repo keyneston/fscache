@@ -3,10 +3,12 @@
 package watcher
 
 import (
+	"os"
 	"sync"
 	"time"
 
 	"github.com/fsnotify/fsevents"
+	"github.com/sirupsen/logrus"
 )
 
 func New(root string) (Watcher, error) {
@@ -60,6 +62,13 @@ func (d *DarwinWatcher) handleEvents(events []fsevents.Event) {
 		case checkFlag(e.Flags, fsevents.ItemCreated):
 			t.Type = EventTypeDelete
 		}
+
+		stat, err := os.Stat(e.Path)
+		if err != nil {
+			logrus.WithField("path", e.Path).Error(err)
+			continue // TODO Should we do something else here?
+		}
+		t.Dir = stat.IsDir()
 
 		translated = append(translated, t)
 	}
