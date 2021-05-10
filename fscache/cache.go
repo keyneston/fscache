@@ -134,6 +134,10 @@ func (fs *FSCache) init() {
 			return filepath.SkipDir
 		}
 
+		if fs.dirOnly && !d.IsDir() {
+			return nil
+		}
+
 		info, err := d.Info()
 		if err != nil {
 			return err

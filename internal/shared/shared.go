@@ -11,16 +11,19 @@ import (
 )
 
 type Config struct {
-	Debug bool
+	Debug   bool
+	PIDFile string
 
 	globalOnce sync.Once
 }
 
 func (c *Config) SetFlags(f *flag.FlagSet) {
 	f.BoolVar(&c.Debug, "debug", false, "Enable verbose debug logging")
+	f.StringVar(&c.PIDFile, "pid", "{home}/.cache/{cache}.pid", "Which PID file to use")
 
 	c.globalOnce.Do(func() {
 		flag.BoolVar(&c.Debug, "debug", false, "Enable verbose debug logging")
+		flag.StringVar(&c.PIDFile, "pid", "{home}/.cache/{cache}.pid", "Which PID file to use")
 	})
 }
 

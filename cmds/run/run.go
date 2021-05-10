@@ -3,7 +3,8 @@ package run
 import (
 	"context"
 	"flag"
-	"log"
+	"fmt"
+	"os"
 
 	"github.com/google/subcommands"
 	"github.com/keyneston/fscachemonitor/fscache"
@@ -46,9 +47,21 @@ func (c *Command) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) 
 		return shared.Exitf("Must specify file to output cache to")
 	}
 
+	pid, err := shared.NewPID(c.PIDFile, c.root, c.filename)
+	if err != nil {
+		return shared.Exitf("Error creating pid file: %v", err)
+	}
+
+	if ok, err := pid.Acquire(); err != nil {
+		return shared.Exitf("Error starting monitor: %v", err)
+	} else if !ok {
+		fmt.Fprintf(os.Stdout, "fscachemonitor is already running\n")
+		return subcommands.ExitSuccess
+	}
+
 	fs, err := fscache.New(c.filename, c.root, c.sql, c.dirOnly)
 	if err != nil {
-		log.Fatalf("Error starting monitor: %v", err)
+		return shared.Exitf("Error starting monitor: %v", err)
 	}
 	fs.Run()
 

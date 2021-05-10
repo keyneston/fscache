@@ -3,6 +3,7 @@
 package watcher
 
 import (
+	"errors"
 	"os"
 	"sync"
 	"time"
@@ -65,7 +66,10 @@ func (d *DarwinWatcher) handleEvents(events []fsevents.Event) {
 
 		stat, err := os.Stat(e.Path)
 		if err != nil {
-			logrus.WithField("path", e.Path).Error(err)
+			if !errors.Is(err, os.ErrNotExist) {
+				logrus.WithField("path", e.Path).Error(err)
+			}
+
 			continue // TODO Should we do something else here?
 		}
 		t.Dir = stat.IsDir()
