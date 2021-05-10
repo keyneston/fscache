@@ -89,7 +89,7 @@ func (fs *FSCache) handleEvent(e watcher.Event) {
 	// TODO: find a better way:
 	for _, seg := range strings.Split(e.Path, "/") {
 		if skipFile(seg) {
-			log.Printf("Skipping %q", e.Path)
+			logrus.Debugf("Skipping %q", e.Path)
 			return
 		}
 	}
@@ -130,7 +130,7 @@ func (fs *FSCache) init() {
 		}
 
 		if skipFile(path) {
-			log.Printf("Skipping %q", path)
+			logrus.Debugf("Skipping %q", path)
 			return filepath.SkipDir
 		}
 
