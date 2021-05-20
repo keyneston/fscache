@@ -35,7 +35,6 @@ func (c *Command) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&c.filename, "c", "", "Cache file")
 	f.StringVar(&c.filename, "cache", "", "Alias for -c")
 	f.IntVar(&c.limit, "n", 0, "Number of items to return. 0 for all")
-	f.BoolVar(&c.sql, "s", true, "Use SQLite3 backed file")
 	f.BoolVar(&c.dirOnly, "d", false, "Only return directories")
 }
 
@@ -44,12 +43,7 @@ func (c *Command) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) 
 		return shared.Exitf("Must specify file to read from")
 	}
 
-	mode := fslist.ModeList
-	if c.sql {
-		mode = fslist.ModeSQL
-	}
-
-	list, err := fslist.Open(c.filename, mode)
+	list, err := fslist.Open(c.filename, fslist.ModeSQL)
 	if err != nil {
 		log.Fatalf("Error starting monitor: %v", err)
 	}

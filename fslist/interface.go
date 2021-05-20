@@ -1,6 +1,7 @@
 package fslist
 
 import (
+	"fmt"
 	"io"
 	"time"
 )
@@ -28,8 +29,7 @@ type ReadOptions struct {
 type Mode = string
 
 const (
-	ModeSQL  Mode = "sql"
-	ModeList      = "list"
+	ModeSQL Mode = "sql"
 )
 
 func Open(path string, mode Mode) (FSList, error) {
@@ -37,9 +37,7 @@ func Open(path string, mode Mode) (FSList, error) {
 	switch mode {
 	case ModeSQL:
 		return OpenSQL(path)
-	case ModeList:
-		return OpenList(path)
 	}
 
-	return nil, nil
+	return nil, fmt.Errorf("Unknown mode: %v", mode)
 }
