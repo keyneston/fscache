@@ -56,3 +56,12 @@ func (p *PID) Acquire() (bool, error) {
 func (p *PID) Release() error {
 	return p.lock.Unlock()
 }
+
+func (p *PID) Stop() error {
+	proc, err := p.lock.GetOwner()
+	if err != nil {
+		return err
+	}
+
+	return proc.Kill()
+}

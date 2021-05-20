@@ -4,6 +4,9 @@ import (
 	"database/sql"
 	"fmt"
 	"io"
+	"log"
+
+	sq "github.com/Masterminds/squirrel"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -38,8 +41,12 @@ type SQList struct {
 }
 
 func (s *SQList) init() error {
+	log.Printf("Calling sql init")
 	sqlStmt := `
-	CREATE TABLE IF NOT EXISTS files (filename TEXT PRIMARY KEY UNIQUE, updated_at TIMESTAMP NOT NULL);
+	DROP INDEX IF EXISTS files_idx_path;
+	DROP TABLE IF EXISTS files;
+	CREATE TABLE IF NOT EXISTS files (filename TEXT PRIMARY KEY UNIQUE, updated_at TIMESTAMP NOT NULL, dir BOOL);
+	CREATE INDEX files_idx_path ON files(filename COLLATE NOCASE);
 	DELETE FROM files;
 	`
 	_, err := s.db.Exec(sqlStmt)
@@ -58,10 +65,10 @@ func (s *SQList) Pending() bool {
 
 func (s *SQList) Add(data AddData) error {
 	sqlStmt := `
-insert into files (filename, updated_at) values ($1, $2) ON CONFLICT(filename) DO NOTHING;
+insert into files (filename, updated_at, dir) values ($1, $2, $3) ON CONFLICT(filename) DO NOTHING;
 `
 
-	_, err := s.db.Exec(sqlStmt, data.Name, data.UpdatedAt)
+	_, err := s.db.Exec(sqlStmt, data.Name, data.UpdatedAt, data.IsDir)
 	return err
 }
 
@@ -84,13 +91,24 @@ func (s *SQList) Write() error {
 
 func (s *SQList) Copy(w io.Writer, opts ReadOptions) error {
 	// sqlite interprets a negative limit as all rows
-	sqlStmt := `SELECT filename FROM files ORDER BY updated_at DESC LIMIT $1`
+	stmt := sq.Select("filename").From("files")
+
+	if opts.DirsOnly {
+		stmt = stmt.Where(sq.Eq{"dir": true})
+	}
+
+	stmt = stmt.OrderBy("updated_at DESC").Limit(uint64(opts.Limit))
 
 	if opts.Limit == 0 {
 		opts.Limit = -1
 	}
 
-	rows, err := s.db.Query(sqlStmt, opts.Limit)
+	sqlStmt, args, err := stmt.ToSql()
+	if err != nil {
+		return err
+	}
+
+	rows, err := s.db.Query(sqlStmt, args...)
 	if err != nil {
 		return err
 	}

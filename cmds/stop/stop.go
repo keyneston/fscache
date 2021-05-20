@@ -1,13 +1,10 @@
-package run
+package stop
 
 import (
 	"context"
 	"flag"
-	"fmt"
-	"os"
 
 	"github.com/google/subcommands"
-	"github.com/keyneston/fscachemonitor/fscache"
 	"github.com/keyneston/fscachemonitor/internal/shared"
 )
 
@@ -17,12 +14,13 @@ type Command struct {
 	root     string
 	filename string
 	sql      bool
+	dirOnly  bool
 }
 
-func (*Command) Name() string     { return "run" }
-func (*Command) Synopsis() string { return "Run fscachemonitor" }
+func (*Command) Name() string     { return "stop" }
+func (*Command) Synopsis() string { return "Stop running fscachemonitor" }
 func (*Command) Usage() string {
-	return `run:
+	return `stop:
 `
 }
 
@@ -33,7 +31,7 @@ func (c *Command) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&c.root, "root", "", "Alias for -r")
 	f.StringVar(&c.filename, "c", "", "File to output cache to")
 	f.StringVar(&c.filename, "cache", "", "Alias for -c")
-	f.BoolVar(&c.sql, "s", true, "Use SQLite3 backed file")
+	f.BoolVar(&c.sql, "s", false, "Use SQLite3 backed file")
 }
 
 func (c *Command) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
@@ -50,18 +48,14 @@ func (c *Command) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) 
 		return shared.Exitf("Error creating pid file: %v", err)
 	}
 
+	defer pid.Release()
 	if ok, err := pid.Acquire(); err != nil {
-		return shared.Exitf("Error starting monitor: %v", err)
+		return shared.Exitf("Error checking pid: %v", err)
 	} else if !ok {
-		fmt.Fprintf(os.Stdout, "fscachemonitor is already running\n")
-		return subcommands.ExitSuccess
+		if err := pid.Stop(); err != nil {
+			shared.Exitf("Error stopping: %v", err)
+		}
 	}
-
-	fs, err := fscache.New(c.filename, c.root)
-	if err != nil {
-		return shared.Exitf("Error starting monitor: %v", err)
-	}
-	fs.Run()
 
 	return subcommands.ExitSuccess
 }

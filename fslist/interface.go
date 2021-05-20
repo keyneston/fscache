@@ -8,6 +8,7 @@ import (
 type AddData struct {
 	Name      string
 	UpdatedAt time.Time
+	IsDir     bool
 }
 
 type FSList interface {
@@ -20,7 +21,8 @@ type FSList interface {
 }
 
 type ReadOptions struct {
-	Limit int
+	Limit    int
+	DirsOnly bool
 }
 
 type Mode = string

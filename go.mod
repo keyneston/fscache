@@ -3,6 +3,7 @@ module github.com/keyneston/fscachemonitor
 go 1.16
 
 require (
+	github.com/Masterminds/squirrel v1.5.0 // indirect
 	github.com/fsnotify/fsevents v0.1.1 // indirect
 	github.com/fsnotify/fsnotify v1.4.9
 	github.com/google/subcommands v1.2.0 // indirect
