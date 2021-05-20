@@ -1,7 +1,6 @@
 package fscache
 
 import (
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -101,7 +100,8 @@ func (fs *FSCache) Close() {
 func (fs *FSCache) init() {
 	filepath.WalkDir(fs.Root, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
-			log.Printf("Error during init: %v", err)
+			shared.Logger().Errorf("Error during init: %v", err)
+			return nil
 		}
 
 		if skipFile(path) {

@@ -31,18 +31,22 @@ func (c *Command) SetFlags(f *flag.FlagSet) {
 
 	f.StringVar(&c.root, "r", "", "Root directory to monitor")
 	f.StringVar(&c.root, "root", "", "Alias for -r")
-	f.StringVar(&c.filename, "c", "", "File to output cache to")
-	f.StringVar(&c.filename, "cache", "", "Alias for -c")
 	f.BoolVar(&c.sql, "s", true, "Use SQLite3 backed file")
 }
 
 func (c *Command) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
+	var err error
+
 	if c.root == "" {
-		return shared.Exitf("Must specify root to watch")
+		c.root, err = os.UserHomeDir()
+		if err != nil {
+			return shared.Exitf("Unable to get root location: %v", err)
+		}
 	}
 
-	if c.filename == "" {
-		return shared.Exitf("Must specify file to output cache to")
+	c.root, err = c.CacheLocation()
+	if err != nil {
+		return shared.Exitf("Unable to get cache location: %v", err)
 	}
 
 	pid, err := shared.NewPID(c.PIDFile, c.root, c.filename)

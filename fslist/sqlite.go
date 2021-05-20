@@ -32,22 +32,26 @@ func OpenSQL(location string) (FSList, error) {
 	}
 
 	s := &SQList{
-		db: db,
+		db:       db,
+		location: location,
 	}
 
 	return s, nil
 }
 
 type SQList struct {
-	db *sql.DB
+	db       *sql.DB
+	location string
 }
 
 func (s *SQList) init() error {
 	sqlStmt := `
 DROP INDEX IF EXISTS files_idx_path;
+DROP INDEX IF EXISTS files_idx_prefix_filename;
 DROP TABLE IF EXISTS files;
-CREATE TABLE IF NOT EXISTS files (filename TEXT PRIMARY KEY UNIQUE, updated_at TIMESTAMP NOT NULL, dir BOOL);
-CREATE INDEX files_idx_path ON files(filename COLLATE NOCASE);
+CREATE TABLE files (filename TEXT PRIMARY KEY UNIQUE, updated_at TIMESTAMP NOT NULL, dir BOOL);
+CREATE INDEX files_idx_path ON files(filename COLLATE NOCASE, dir);
+CREATE INDEX files_idx_prefix_filename ON files(filename COLLATE NOCASE, dir);
 DELETE FROM files;
 	`
 	_, err := s.db.Exec(sqlStmt)
@@ -66,7 +70,7 @@ func (s *SQList) Pending() bool {
 
 func (s *SQList) Add(data AddData) error {
 	sqlStmt := `
-insert into files (filename, updated_at, dir) values ($1, $2, $3) ON CONFLICT(filename) DO NOTHING;
+INSERT INTO files (filename, updated_at, dir) VALUES ($1, $2, $3) ON CONFLICT(filename) DO NOTHING;
 `
 
 	_, err := s.db.Exec(sqlStmt, data.Name, data.UpdatedAt, data.IsDir)

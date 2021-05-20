@@ -13,9 +13,8 @@ import (
 type Command struct {
 	*shared.Config
 
-	filename string
-	dirOnly  bool
-	prefix   string
+	dirOnly bool
+	prefix  string
 
 	limit int
 }
@@ -30,8 +29,6 @@ func (*Command) Usage() string {
 func (c *Command) SetFlags(f *flag.FlagSet) {
 	c.Config.SetFlags(f)
 
-	f.StringVar(&c.filename, "c", "", "Cache file")
-	f.StringVar(&c.filename, "cache", "", "Alias for -c")
 	f.StringVar(&c.prefix, "p", "", "Prefix to limit paths returned")
 	f.StringVar(&c.prefix, "prefix", "", "Alias for -p")
 	f.IntVar(&c.limit, "n", 0, "Number of items to return. 0 for all")
@@ -40,12 +37,14 @@ func (c *Command) SetFlags(f *flag.FlagSet) {
 
 func (c *Command) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
 	logger := shared.Logger()
-	if c.filename == "" {
-		return shared.Exitf("Must specify file to read from")
+
+	cache, err := c.CacheLocation()
+	if err != nil {
+		return shared.Exitf("Error getting database file: %v", err)
 	}
 
 	logger.Debugf("About to open")
-	list, err := fslist.Open(c.filename, fslist.ModeSQL)
+	list, err := fslist.Open(cache, fslist.ModeSQL)
 	if err != nil {
 		return shared.Exitf("Error opening database: %v", err)
 	}
