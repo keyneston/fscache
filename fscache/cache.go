@@ -9,9 +9,8 @@ import (
 	"time"
 
 	"github.com/keyneston/fscachemonitor/fslist"
+	"github.com/keyneston/fscachemonitor/internal/shared"
 	"github.com/keyneston/fscachemonitor/watcher"
-
-	"github.com/sirupsen/logrus"
 )
 
 type FSCache struct {
@@ -65,27 +64,28 @@ func (fs *FSCache) Run() {
 }
 
 func (fs *FSCache) handleEvent(e watcher.Event) {
+	logger := shared.Logger()
 	// TODO: find a better way:
 	for _, seg := range strings.Split(e.Path, "/") {
 		if skipFile(seg) {
-			logrus.Debugf("Skipping %q", e.Path)
+			logger.Debugf("Skipping %q", e.Path)
 			return
 		}
 	}
 
 	switch e.Type {
 	case watcher.EventTypeDelete:
-		logrus.Debugf("Removing %q", e.Path)
+		logger.Debugf("Removing %q", e.Path)
 		if err := fs.fileList.Delete(e.Path); err != nil {
-			logrus.Errorf("Error deleting file: %v", err)
+			logger.Errorf("Error deleting file: %v", err)
 		}
 	case watcher.EventTypeAdd:
-		logrus.Debugf("Adding %q", e.Path)
+		logger.Debugf("Adding %q", e.Path)
 		if err := fs.fileList.Add(fslist.AddData{
 			Name:      e.Path,
 			UpdatedAt: time.Now(),
 		}); err != nil {
-			logrus.Errorf("Error adding file: %v", err)
+			logger.Errorf("Error adding file: %v", err)
 		}
 	}
 }
@@ -105,7 +105,7 @@ func (fs *FSCache) init() {
 		}
 
 		if skipFile(path) {
-			logrus.Debugf("Skipping %q", path)
+			shared.Logger().Debugf("Skipping %q", path)
 			return filepath.SkipDir
 		}
 

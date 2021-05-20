@@ -4,9 +4,9 @@ import (
 	"database/sql"
 	"fmt"
 	"io"
-	"log"
 
 	sq "github.com/Masterminds/squirrel"
+	"github.com/keyneston/fscachemonitor/internal/shared"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -14,6 +14,7 @@ import (
 var _ FSList = &SQList{}
 
 func NewSQL(location string) (FSList, error) {
+	shared.Logger().WithField("database", location).Debugf("new sqlite3 database")
 	list, err := OpenSQL(location)
 	if err != nil {
 		return nil, err
@@ -24,6 +25,7 @@ func NewSQL(location string) (FSList, error) {
 }
 
 func OpenSQL(location string) (FSList, error) {
+	shared.Logger().WithField("database", location).Debugf("opening sqlite3 database")
 	db, err := sql.Open("sqlite3", fmt.Sprintf("file:%s", location))
 	if err != nil {
 		return nil, fmt.Errorf("Error creating SQList: %w", err)
@@ -41,13 +43,12 @@ type SQList struct {
 }
 
 func (s *SQList) init() error {
-	log.Printf("Calling sql init")
 	sqlStmt := `
-	DROP INDEX IF EXISTS files_idx_path;
-	DROP TABLE IF EXISTS files;
-	CREATE TABLE IF NOT EXISTS files (filename TEXT PRIMARY KEY UNIQUE, updated_at TIMESTAMP NOT NULL, dir BOOL);
-	CREATE INDEX files_idx_path ON files(filename COLLATE NOCASE);
-	DELETE FROM files;
+DROP INDEX IF EXISTS files_idx_path;
+DROP TABLE IF EXISTS files;
+CREATE TABLE IF NOT EXISTS files (filename TEXT PRIMARY KEY UNIQUE, updated_at TIMESTAMP NOT NULL, dir BOOL);
+CREATE INDEX files_idx_path ON files(filename COLLATE NOCASE);
+DELETE FROM files;
 	`
 	_, err := s.db.Exec(sqlStmt)
 	if err != nil {
@@ -85,6 +86,7 @@ func (s *SQList) Len() int {
 }
 
 func (s *SQList) Copy(w io.Writer, opts ReadOptions) error {
+	shared.Logger().WithField("options", opts).Debugf("Copy called")
 	// sqlite interprets a negative limit as all rows
 	stmt := sq.Select("filename").From("files")
 
@@ -96,7 +98,9 @@ func (s *SQList) Copy(w io.Writer, opts ReadOptions) error {
 		stmt = stmt.Where(sq.Like{"filename": fmt.Sprintf("%s%%", opts.Prefix)})
 	}
 
-	stmt = stmt.OrderBy("updated_at DESC").Limit(uint64(opts.Limit))
+	if opts.Limit > 0 {
+		stmt = stmt.OrderBy("updated_at DESC").Limit(uint64(opts.Limit))
+	}
 
 	if opts.Limit == 0 {
 		opts.Limit = -1
@@ -107,12 +111,15 @@ func (s *SQList) Copy(w io.Writer, opts ReadOptions) error {
 		return err
 	}
 
+	shared.Logger().WithField("sql", sqlStmt).Debugf("executing sql")
+
 	rows, err := s.db.Query(sqlStmt, args...)
 	if err != nil {
 		return err
 	}
 	defer rows.Close()
 
+	count := 0
 	for rows.Next() {
 		var filename string
 
@@ -121,7 +128,9 @@ func (s *SQList) Copy(w io.Writer, opts ReadOptions) error {
 		}
 
 		fmt.Fprintln(w, filename)
+		count++
 	}
+	shared.Logger().WithField("rows", count).Debugf("Finished copying")
 
 	return nil
 }

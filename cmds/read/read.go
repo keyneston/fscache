@@ -3,8 +3,6 @@ package read
 import (
 	"context"
 	"flag"
-	"fmt"
-	"log"
 	"os"
 
 	"github.com/google/subcommands"
@@ -16,7 +14,6 @@ type Command struct {
 	*shared.Config
 
 	filename string
-	sql      bool
 	dirOnly  bool
 	prefix   string
 
@@ -42,23 +39,26 @@ func (c *Command) SetFlags(f *flag.FlagSet) {
 }
 
 func (c *Command) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
+	logger := shared.Logger()
 	if c.filename == "" {
 		return shared.Exitf("Must specify file to read from")
 	}
 
+	logger.Debugf("About to open")
 	list, err := fslist.Open(c.filename, fslist.ModeSQL)
 	if err != nil {
-		log.Fatalf("Error starting monitor: %v", err)
+		return shared.Exitf("Error opening database: %v", err)
 	}
 
+	logger.Debugf("About to copy")
 	if err := list.Copy(os.Stdout, fslist.ReadOptions{
 		Limit:    c.limit,
 		DirsOnly: c.dirOnly,
 		Prefix:   c.prefix,
 	}); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v", err)
-		return subcommands.ExitFailure
+		return shared.Exitf("Error reading database: %v", err)
 	}
+	logger.Debugf("Finished copying")
 
 	return subcommands.ExitSuccess
 }
