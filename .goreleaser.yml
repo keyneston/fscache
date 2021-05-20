@@ -58,6 +58,7 @@ release:
 
 builds:
   - goos:
-      - darwin
+    # Disable due to CGO issues
+    # - darwin 
         # Currently linux is blocked on having a watcher instance that works
 
