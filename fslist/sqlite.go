@@ -14,6 +14,10 @@ import (
 var _ FSList = &SQList{}
 
 func NewSQL(location string) (FSList, error) {
+	if location == "" {
+		return nil, fmt.Errorf("Must supply a location for the database")
+	}
+
 	shared.Logger().WithField("database", location).Debugf("new sqlite3 database")
 	list, err := OpenSQL(location)
 	if err != nil {

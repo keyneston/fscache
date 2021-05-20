@@ -14,9 +14,8 @@ import (
 type Command struct {
 	*shared.Config
 
-	root     string
-	filename string
-	sql      bool
+	root string
+	sql  bool
 }
 
 func (*Command) Name() string     { return "run" }
@@ -44,12 +43,12 @@ func (c *Command) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) 
 		}
 	}
 
-	c.root, err = c.CacheLocation()
+	cache, err := c.CacheLocation()
 	if err != nil {
 		return shared.Exitf("Unable to get cache location: %v", err)
 	}
 
-	pid, err := shared.NewPID(c.PIDFile, c.root, c.filename)
+	pid, err := shared.NewPID(c.PIDFile, c.root, cache)
 	if err != nil {
 		return shared.Exitf("Error creating pid file: %v", err)
 	}
@@ -61,7 +60,7 @@ func (c *Command) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) 
 		return subcommands.ExitSuccess
 	}
 
-	fs, err := fscache.New(c.filename, c.root)
+	fs, err := fscache.New(cache, c.root)
 	if err != nil {
 		return shared.Exitf("Error starting monitor: %v", err)
 	}
