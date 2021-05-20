@@ -84,17 +84,16 @@ func (s *SQList) Len() int {
 	return 0
 }
 
-func (s *SQList) Write() error {
-	// NOOP
-	return nil
-}
-
 func (s *SQList) Copy(w io.Writer, opts ReadOptions) error {
 	// sqlite interprets a negative limit as all rows
 	stmt := sq.Select("filename").From("files")
 
 	if opts.DirsOnly {
 		stmt = stmt.Where(sq.Eq{"dir": true})
+	}
+
+	if opts.Prefix != "" {
+		stmt = stmt.Where(sq.Like{"filename": fmt.Sprintf("%s%%", opts.Prefix)})
 	}
 
 	stmt = stmt.OrderBy("updated_at DESC").Limit(uint64(opts.Limit))

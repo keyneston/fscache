@@ -17,13 +17,13 @@ type FSList interface {
 	Add(AddData) error
 	Delete(name string) error
 	Len() int
-	Write() error
 	Copy(io.Writer, ReadOptions) error
 }
 
 type ReadOptions struct {
 	Limit    int
 	DirsOnly bool
+	Prefix   string
 }
 
 type Mode = string

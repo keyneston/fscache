@@ -18,6 +18,7 @@ type Command struct {
 	filename string
 	sql      bool
 	dirOnly  bool
+	prefix   string
 
 	limit int
 }
@@ -34,6 +35,8 @@ func (c *Command) SetFlags(f *flag.FlagSet) {
 
 	f.StringVar(&c.filename, "c", "", "Cache file")
 	f.StringVar(&c.filename, "cache", "", "Alias for -c")
+	f.StringVar(&c.prefix, "p", "", "Prefix to limit paths returned")
+	f.StringVar(&c.prefix, "prefix", "", "Alias for -p")
 	f.IntVar(&c.limit, "n", 0, "Number of items to return. 0 for all")
 	f.BoolVar(&c.dirOnly, "d", false, "Only return directories")
 }
@@ -48,7 +51,11 @@ func (c *Command) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) 
 		log.Fatalf("Error starting monitor: %v", err)
 	}
 
-	if err := list.Copy(os.Stdout, fslist.ReadOptions{Limit: c.limit, DirsOnly: c.dirOnly}); err != nil {
+	if err := list.Copy(os.Stdout, fslist.ReadOptions{
+		Limit:    c.limit,
+		DirsOnly: c.dirOnly,
+		Prefix:   c.prefix,
+	}); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v", err)
 		return subcommands.ExitFailure
 	}

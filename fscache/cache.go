@@ -51,12 +51,9 @@ func New(filename, root string) (*FSCache, error) {
 func (fs *FSCache) Run() {
 	fs.watcher.Start()
 	fs.init()
-	ticker := time.NewTicker(time.Second)
 
 	for {
 		select {
-		case <-ticker.C:
-			fs.updateWritten()
 		case events := <-fs.watcher.Stream():
 			for _, e := range events {
 				fs.handleEvent(e)
@@ -64,18 +61,6 @@ func (fs *FSCache) Run() {
 		case <-fs.closeCh:
 			return
 		}
-	}
-}
-
-func (fs *FSCache) updateWritten() {
-	if !fs.fileList.Pending() {
-		return
-	}
-	logrus.Debugf("Pending updates, writing new cache")
-
-	if err := fs.fileList.Write(); err != nil {
-		logrus.Errorf("Error: %v", err)
-		return
 	}
 }
 
