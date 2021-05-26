@@ -52,8 +52,9 @@ func (s *SQList) init() error {
 	sqlStmt := `
 DROP INDEX IF EXISTS files_idx_path;
 DROP INDEX IF EXISTS files_idx_prefix_filename;
+DROP TABLE IF EXISTS search_files;
 DROP TABLE IF EXISTS files;
-CREATE TABLE files (filename TEXT PRIMARY KEY UNIQUE, updated_at TIMESTAMP NOT NULL, dir BOOL);
+CREATE VIRTUAL TABLE files fts5(filename TEXT PRIMARY KEY UNIQUE, updated_at TIMESTAMP NOT NULL, dir BOOL);
 CREATE INDEX files_idx_path ON files(filename COLLATE NOCASE, dir);
 CREATE INDEX files_idx_prefix_filename ON files(filename COLLATE NOCASE, dir);
 DELETE FROM files;
