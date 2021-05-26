@@ -1,16 +1,14 @@
-TAGS=""
-
 .PHONY: build
 build: test
-	go build ${TAGS} ./
+	go build ./
 
 test:
-	go test ${TAGS} ./...
+	go test ./...
 
 .PHONY: install
 install: 
-	go install ${TAGS} ./
+	go install ./
 
 .PHONY: run
 run:
-	go run ${TAGS} ./ run
+	go run ./ run -mode pebble

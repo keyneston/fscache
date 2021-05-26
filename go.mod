@@ -4,6 +4,7 @@ go 1.16
 
 require (
 	github.com/Masterminds/squirrel v1.5.0
+	github.com/cockroachdb/pebble v0.0.0-20210526183633-dd2a545f5d75 // indirect
 	github.com/fsnotify/fsevents v0.1.1
 	github.com/google/subcommands v1.2.0
 	github.com/mattn/go-sqlite3 v1.14.7

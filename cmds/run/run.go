@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/subcommands"
 	"github.com/keyneston/fscachemonitor/fscache"
+	"github.com/keyneston/fscachemonitor/fslist"
 	"github.com/keyneston/fscachemonitor/internal/shared"
 )
 
@@ -15,7 +16,7 @@ type Command struct {
 	*shared.Config
 
 	root string
-	sql  bool
+	mode string
 }
 
 func (*Command) Name() string     { return "run" }
@@ -30,7 +31,7 @@ func (c *Command) SetFlags(f *flag.FlagSet) {
 
 	f.StringVar(&c.root, "r", "", "Root directory to monitor")
 	f.StringVar(&c.root, "root", "", "Alias for -r")
-	f.BoolVar(&c.sql, "s", true, "Use SQLite3 backed file")
+	f.StringVar(&c.mode, "mode", "sql", "DB mode; experimental")
 }
 
 func (c *Command) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
@@ -60,7 +61,7 @@ func (c *Command) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) 
 		return subcommands.ExitSuccess
 	}
 
-	fs, err := fscache.New(cache, c.root)
+	fs, err := fscache.New(cache, c.root, fslist.Mode(c.mode))
 	if err != nil {
 		return shared.Exitf("Error starting monitor: %v", err)
 	}

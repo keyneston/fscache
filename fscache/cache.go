@@ -25,7 +25,7 @@ type FSCache struct {
 	closeOnce sync.Once
 }
 
-func New(filename, root string) (*FSCache, error) {
+func New(filename, root string, mode fslist.Mode) (*FSCache, error) {
 	watcher, err := watcher.New(root)
 	if err != nil {
 		return nil, err
@@ -38,7 +38,7 @@ func New(filename, root string) (*FSCache, error) {
 		limit:    40000,
 	}
 
-	fs.fileList, err = fslist.NewSQL(filename)
+	fs.fileList, err = fslist.New(filename, mode)
 	if err != nil {
 		return nil, err
 	}
