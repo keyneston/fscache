@@ -4,9 +4,11 @@ import (
 	"context"
 	"net"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/keyneston/fscachemonitor/fslist"
@@ -74,6 +76,7 @@ func New(socketLocation, root string, mode fslist.Mode) (*FSCache, error) {
 func (fs *FSCache) Run() {
 	go fs.server.Serve(fs.socket)
 
+	fs.setSignalHandlers()
 	fs.watcher.Start()
 	fs.init()
 
@@ -88,6 +91,16 @@ func (fs *FSCache) Run() {
 			return
 		}
 	}
+}
+
+func (fs *FSCache) setSignalHandlers() {
+	ch := make(chan os.Signal, 1)
+
+	signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		<-ch
+		fs.Close()
+	}()
 }
 
 func eventToAddData(e watcher.Event) fslist.AddData {
