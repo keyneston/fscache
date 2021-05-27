@@ -3,7 +3,6 @@ package fslist
 import (
 	"bytes"
 	"fmt"
-	"io"
 	"time"
 )
 
@@ -32,7 +31,7 @@ type FSList interface {
 	Add(AddData) error
 	Delete(AddData) error
 	Len() int
-	Copy(io.Writer, ReadOptions) error
+	Fetch(ReadOptions) <-chan AddData
 }
 
 type ReadOptions struct {
@@ -48,25 +47,25 @@ const (
 	ModePebble Mode = "pebble"
 )
 
-func Open(path string, mode Mode) (FSList, error) {
+func Open(mode Mode) (FSList, error) {
 	// do a thing here
 	switch mode {
 	case ModeSQL:
-		return OpenSQL(path)
+		return OpenSQL()
 	case ModePebble:
-		return OpenPebble(path)
+		return OpenPebble()
 	}
 
 	return nil, fmt.Errorf("Unknown mode: %v", mode)
 }
 
-func New(path string, mode Mode) (FSList, error) {
+func New(mode Mode) (FSList, error) {
 	// do a thing here
 	switch mode {
 	case ModeSQL:
-		return NewSQL(path)
+		return NewSQL()
 	case ModePebble:
-		return NewPebble(path)
+		return NewPebble()
 	}
 
 	return nil, fmt.Errorf("Unknown mode: %v", mode)

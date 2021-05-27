@@ -2,8 +2,6 @@ package fslist
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
 	"testing"
 	"time"
 )
@@ -17,14 +15,13 @@ func BenchmarkAdd(b *testing.B) {
 		ModeSQL,
 		ModePebble,
 	} {
-		tmp, err := os.MkdirTemp("", "fscachemonitor-benchmark-*")
-		if err != nil {
-			b.Errorf("Error creating tmpdir: %v", err)
-			continue
-		}
-
-		list, err := New(filepath.Join(tmp, "db"), mode)
 		b.Run(fmt.Sprintf("%s_add", mode), func(b *testing.B) {
+			list, err := New(mode)
+			if err != nil {
+				b.Fatalf("Error creating fslist: %v", err)
+				return
+			}
+
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
 				list.Add(testData[0])

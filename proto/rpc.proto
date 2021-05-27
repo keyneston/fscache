@@ -4,6 +4,7 @@ option go_package = "github.com/keyneston/fscachemonitor/proto";
 message ListRequest {
   string prefix = 1;
   int32 limit = 2;
+  bool dirsOnly = 3;
 }
 
 message File {

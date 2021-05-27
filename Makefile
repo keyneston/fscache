@@ -16,7 +16,11 @@ install:
 
 .PHONY: run
 run:
-	go run ./ run -mode pebble
+	go run ./ run -mode pebble -debug
+
+.PHONY: read
+read:
+	go run ./ read -debug
 
 .PHONY: generate
 generate:

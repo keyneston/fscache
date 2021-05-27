@@ -44,12 +44,12 @@ func (c *Command) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) 
 		}
 	}
 
-	cache, err := c.CacheLocation()
+	socketLoc, err := c.SocketLocation()
 	if err != nil {
-		return shared.Exitf("Unable to get cache location: %v", err)
+		return shared.Exitf("Unable to get socket location: %v", err)
 	}
 
-	pid, err := shared.NewPID(c.PIDFile, c.root, cache)
+	pid, err := shared.NewPID(c.PIDFile, c.root, socketLoc)
 	if err != nil {
 		return shared.Exitf("Error creating pid file: %v", err)
 	}
@@ -61,7 +61,7 @@ func (c *Command) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) 
 		return subcommands.ExitSuccess
 	}
 
-	fs, err := fscache.New(cache, c.root, fslist.Mode(c.mode))
+	fs, err := fscache.New(socketLoc, c.root, fslist.Mode(c.mode))
 	if err != nil {
 		return shared.Exitf("Error starting monitor: %v", err)
 	}

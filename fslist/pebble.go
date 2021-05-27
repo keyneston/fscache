@@ -3,7 +3,7 @@ package fslist
 import (
 	"encoding/json"
 	"fmt"
-	"io"
+	"os"
 
 	"github.com/cockroachdb/pebble"
 	"github.com/keyneston/fscachemonitor/internal/shared"
@@ -24,17 +24,22 @@ type PebbleList struct {
 	logger *logrus.Entry
 }
 
-func NewPebble(location string) (FSList, error) {
-	return openPebble(location)
+func NewPebble() (FSList, error) {
+	return openPebble()
 }
 
-func OpenPebble(location string) (FSList, error) {
-	return openPebble(location)
+func OpenPebble() (FSList, error) {
+	return openPebble()
 }
 
 //TODO: handle closing the DB connection
 
-func openPebble(location string) (FSList, error) {
+func openPebble() (FSList, error) {
+	location, err := os.MkdirTemp("", "fscache-pebble-db-*")
+	if err != nil {
+		return nil, err
+	}
+
 	logger := shared.Logger().WithField("database", location).WithField("mode", "pebble")
 	logger.Debugf("opening pebble database")
 
@@ -69,7 +74,7 @@ func (s *PebbleList) Pending() bool {
 }
 
 func (s *PebbleList) Add(data AddData) error {
-	s.logger.WithField("data", data).Debugf("Adding")
+	s.logger.WithField("data", data).Tracef("Adding")
 
 	encoded, err := json.Marshal(data)
 	if err != nil {
@@ -104,21 +109,27 @@ func calcUpperBound(prefix string) []byte {
 	return p
 }
 
-func (s *PebbleList) Copy(w io.Writer, opts ReadOptions) error {
-	if err := s.copySet(w, dirPrefix, opts); err != nil {
-		return err
-	}
+func (s *PebbleList) Fetch(opts ReadOptions) <-chan AddData {
+	ch := make(chan AddData, 1)
 
-	if !opts.DirsOnly {
-		if err := s.copySet(w, filePrefix, opts); err != nil {
-			return err
+	go func() {
+		defer close(ch)
+
+		if err := s.copySet(ch, dirPrefix, opts); err != nil {
+			s.logger.WithError(err).Error()
 		}
-	}
 
-	return nil
+		if !opts.DirsOnly {
+			if err := s.copySet(ch, filePrefix, opts); err != nil {
+				s.logger.WithError(err).Error()
+			}
+		}
+	}()
+
+	return ch
 }
 
-func (s *PebbleList) copySet(w io.Writer, keyPrefix string, opts ReadOptions) error {
+func (s *PebbleList) copySet(ch chan<- AddData, keyPrefix string, opts ReadOptions) error {
 	iterOpts := &pebble.IterOptions{
 		LowerBound: []byte(fmt.Sprintf("%s%s", keyPrefix, opts.Prefix)),
 		UpperBound: calcUpperBound(fmt.Sprintf("%s%s", keyPrefix, opts.Prefix)),
@@ -132,10 +143,13 @@ func (s *PebbleList) copySet(w io.Writer, keyPrefix string, opts ReadOptions) er
 	defer iter.Close()
 
 	for iter.First(); iter.Valid(); iter.Next() {
-		w.Write(iter.Key()[len(keyPrefix):])
-		w.Write([]byte{'\n'})
+		var data AddData
+		if err := json.Unmarshal(iter.Value(), &data); err != nil {
+			return err
+		}
+
+		ch <- data
 	}
 
 	return nil
-
 }

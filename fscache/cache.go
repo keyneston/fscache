@@ -1,6 +1,7 @@
 package fscache
 
 import (
+	"net"
 	"os"
 	"path/filepath"
 	"strings"
@@ -9,36 +10,53 @@ import (
 
 	"github.com/keyneston/fscachemonitor/fslist"
 	"github.com/keyneston/fscachemonitor/internal/shared"
+	"github.com/keyneston/fscachemonitor/proto"
 	"github.com/keyneston/fscachemonitor/watcher"
+	"github.com/sirupsen/logrus"
+	"google.golang.org/grpc"
 )
 
+var _ proto.FSCacheServer = &FSCache{}
+
 type FSCache struct {
-	Filename string
-	Root     string
+	proto.UnimplementedFSCacheServer
 
-	fileList fslist.FSList
-	watcher  watcher.Watcher
+	Root string
 
-	limit int
+	fileList       fslist.FSList
+	watcher        watcher.Watcher
+	socket         net.Listener
+	socketLocation string
+	server         *grpc.Server
 
 	closeCh   chan interface{}
 	closeOnce sync.Once
+
+	logger *logrus.Logger
 }
 
-func New(filename, root string, mode fslist.Mode) (*FSCache, error) {
+func New(socketLocation, root string, mode fslist.Mode) (*FSCache, error) {
 	watcher, err := watcher.New(root)
 	if err != nil {
 		return nil, err
 	}
 
-	fs := &FSCache{
-		Filename: filename,
-		Root:     root,
-		watcher:  watcher,
-		limit:    40000,
+	socket, err := net.Listen("unix", socketLocation)
+	if err != nil {
+		return nil, err
 	}
 
-	fs.fileList, err = fslist.New(filename, mode)
+	fs := &FSCache{
+		Root:    root,
+		watcher: watcher,
+		socket:  socket,
+		logger:  shared.Logger().WithField("object", "fscache").Logger,
+		server:  grpc.NewServer(),
+	}
+
+	proto.RegisterFSCacheServer(fs.server, fs)
+
+	fs.fileList, err = fslist.New(mode)
 	if err != nil {
 		return nil, err
 	}
@@ -47,6 +65,8 @@ func New(filename, root string, mode fslist.Mode) (*FSCache, error) {
 }
 
 func (fs *FSCache) Run() {
+	go fs.server.Serve(fs.socket)
+
 	fs.watcher.Start()
 	fs.init()
 
@@ -82,12 +102,12 @@ func (fs *FSCache) handleEvent(e watcher.Event) {
 
 	switch e.Type {
 	case watcher.EventTypeDelete:
-		logger.Debugf("Removing %q", e.Path)
+		logger.Tracef("Removing %q", e.Path)
 		if err := fs.fileList.Delete(eventToAddData(e)); err != nil {
 			logger.Errorf("Error deleting file: %v", err)
 		}
 	case watcher.EventTypeAdd:
-		logger.Debugf("Adding %q", e.Path)
+		logger.Tracef("Adding %q", e.Path)
 		if err := fs.fileList.Add(eventToAddData(e)); err != nil {
 			logger.Errorf("Error adding file: %v", err)
 		}
@@ -96,6 +116,7 @@ func (fs *FSCache) handleEvent(e watcher.Event) {
 
 func (fs *FSCache) Close() {
 	fs.closeOnce.Do(func() {
+		fs.server.Stop()
 		fs.watcher.Stop()
 		close(fs.closeCh)
 	})
@@ -135,4 +156,26 @@ func skipFile(path string) bool {
 	default:
 		return false
 	}
+}
+
+func (fs *FSCache) GetFiles(req *proto.ListRequest, srv proto.FSCache_GetFilesServer) error {
+	fs.logger.WithField("req", req).Debugf("Received request")
+
+	opts := fslist.ReadOptions{
+		DirsOnly: req.DirsOnly,
+		Prefix:   req.Prefix,
+		Limit:    int(req.Limit),
+	}
+
+	for file := range fs.fileList.Fetch(opts) {
+		f := &proto.File{
+			Name: file.Name,
+		}
+
+		if err := srv.Send(f); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
