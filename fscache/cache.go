@@ -62,6 +62,14 @@ func (fs *FSCache) Run() {
 	}
 }
 
+func eventToAddData(e watcher.Event) fslist.AddData {
+	return fslist.AddData{
+		Name:      e.Path,
+		IsDir:     e.Dir,
+		UpdatedAt: time.Now(),
+	}
+}
+
 func (fs *FSCache) handleEvent(e watcher.Event) {
 	logger := shared.Logger()
 	// TODO: find a better way:
@@ -75,15 +83,12 @@ func (fs *FSCache) handleEvent(e watcher.Event) {
 	switch e.Type {
 	case watcher.EventTypeDelete:
 		logger.Debugf("Removing %q", e.Path)
-		if err := fs.fileList.Delete(e.Path); err != nil {
+		if err := fs.fileList.Delete(eventToAddData(e)); err != nil {
 			logger.Errorf("Error deleting file: %v", err)
 		}
 	case watcher.EventTypeAdd:
 		logger.Debugf("Adding %q", e.Path)
-		if err := fs.fileList.Add(fslist.AddData{
-			Name:      e.Path,
-			UpdatedAt: time.Now(),
-		}); err != nil {
+		if err := fs.fileList.Add(eventToAddData(e)); err != nil {
 			logger.Errorf("Error adding file: %v", err)
 		}
 	}

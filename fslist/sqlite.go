@@ -82,10 +82,10 @@ INSERT INTO files (filename, updated_at, dir) VALUES ($1, $2, $3) ON CONFLICT(fi
 	return err
 }
 
-func (s *SQList) Delete(name string) error {
+func (s *SQList) Delete(data AddData) error {
 	sqlStmt := `delete from files where filename = $1`
 
-	_, err := s.db.Exec(sqlStmt, name)
+	_, err := s.db.Exec(sqlStmt, data.Name)
 	return err
 }
 

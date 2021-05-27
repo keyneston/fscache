@@ -15,6 +15,7 @@ type Command struct {
 
 	dirOnly bool
 	prefix  string
+	mode    string
 
 	limit int
 }
@@ -31,6 +32,7 @@ func (c *Command) SetFlags(f *flag.FlagSet) {
 
 	f.StringVar(&c.prefix, "p", "", "Prefix to limit paths returned")
 	f.StringVar(&c.prefix, "prefix", "", "Alias for -p")
+	f.StringVar(&c.mode, "mode", "sql", "DB mode; experimental")
 	f.IntVar(&c.limit, "n", 0, "Number of items to return. 0 for all")
 	f.BoolVar(&c.dirOnly, "d", false, "Only return directories")
 }
@@ -44,7 +46,7 @@ func (c *Command) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) 
 	}
 
 	logger.Debugf("About to open")
-	list, err := fslist.Open(cache, fslist.ModeSQL)
+	list, err := fslist.Open(cache, fslist.Mode(c.mode))
 	if err != nil {
 		return shared.Exitf("Error opening database: %v", err)
 	}

@@ -1,6 +1,7 @@
 package fslist
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"time"
@@ -12,10 +13,24 @@ type AddData struct {
 	IsDir     bool
 }
 
+func (a AddData) key() []byte {
+	key := bytes.NewBuffer(make([]byte, 0, len(a.Name)+5))
+
+	if a.IsDir {
+		key.WriteString("dir:")
+	} else {
+		key.WriteString("file:")
+	}
+
+	key.WriteString(a.Name)
+
+	return key.Bytes()
+}
+
 type FSList interface {
 	Pending() bool
 	Add(AddData) error
-	Delete(name string) error
+	Delete(AddData) error
 	Len() int
 	Copy(io.Writer, ReadOptions) error
 }

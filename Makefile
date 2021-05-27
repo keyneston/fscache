@@ -2,8 +2,13 @@
 build: test
 	go build ./
 
+.PHONY: test
 test:
 	go test ./...
+
+.PHONY: bench
+bench:
+	go test ./... -bench=.
 
 .PHONY: install
 install: 
