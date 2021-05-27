@@ -17,9 +17,9 @@ func (a AddData) key() []byte {
 	key := bytes.NewBuffer(make([]byte, 0, len(a.Name)+5))
 
 	if a.IsDir {
-		key.WriteString("dir:")
+		key.WriteString(dirPrefix)
 	} else {
-		key.WriteString("file:")
+		key.WriteString(filePrefix)
 	}
 
 	key.WriteString(a.Name)

@@ -10,6 +10,11 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+const (
+	dirPrefix  = "dir:"
+	filePrefix = "file:"
+)
+
 var _ FSList = &PebbleList{}
 
 type PebbleList struct {
@@ -98,9 +103,23 @@ func calcUpperBound(prefix string) []byte {
 }
 
 func (s *PebbleList) Copy(w io.Writer, opts ReadOptions) error {
+	if err := s.copySet(w, dirPrefix, opts); err != nil {
+		return err
+	}
+
+	if !opts.DirsOnly {
+		if err := s.copySet(w, filePrefix, opts); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (s *PebbleList) copySet(w io.Writer, keyPrefix string, opts ReadOptions) error {
 	iterOpts := &pebble.IterOptions{
-		LowerBound: []byte(fmt.Sprintf("dir:%s", opts.Prefix)),
-		UpperBound: calcUpperBound(fmt.Sprintf("dir:%s", opts.Prefix)),
+		LowerBound: []byte(fmt.Sprintf("%s%s", keyPrefix, opts.Prefix)),
+		UpperBound: calcUpperBound(fmt.Sprintf("%s%s", keyPrefix, opts.Prefix)),
 	}
 	s.logger.WithField("iterOpts", logrus.Fields{
 		"LowerBound": string(iterOpts.LowerBound),
@@ -111,9 +130,10 @@ func (s *PebbleList) Copy(w io.Writer, opts ReadOptions) error {
 	defer iter.Close()
 
 	for iter.First(); iter.Valid(); iter.Next() {
-		w.Write(iter.Key()[4:])
+		w.Write(iter.Key()[len(keyPrefix):])
 		w.Write([]byte{'\n'})
 	}
 
 	return nil
+
 }
