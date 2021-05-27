@@ -31,7 +31,7 @@ func (c *Command) SetFlags(f *flag.FlagSet) {
 
 	f.StringVar(&c.root, "r", "", "Root directory to monitor")
 	f.StringVar(&c.root, "root", "", "Alias for -r")
-	f.StringVar(&c.mode, "mode", "sql", "DB mode; experimental")
+	f.StringVar(&c.mode, "mode", "pebble", "DB mode; experimental")
 }
 
 func (c *Command) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
@@ -59,6 +59,13 @@ func (c *Command) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) 
 	} else if !ok {
 		fmt.Fprintf(os.Stdout, "fscachemonitor is already running\n")
 		return subcommands.ExitSuccess
+	}
+
+	// Cleanup old socket (if one exists)
+	if _, err := os.Stat(socketLoc); err == nil {
+		if err := os.Remove(socketLoc); err != nil {
+			return shared.Exitf("Error cleaning old socket: %v", err)
+		}
 	}
 
 	fs, err := fscache.New(socketLoc, c.root, fslist.Mode(c.mode))

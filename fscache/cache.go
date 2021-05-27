@@ -25,11 +25,10 @@ type FSCache struct {
 
 	Root string
 
-	fileList       fslist.FSList
-	watcher        watcher.Watcher
-	socket         net.Listener
-	socketLocation string
-	server         *grpc.Server
+	fileList fslist.FSList
+	watcher  watcher.Watcher
+	socket   net.Listener
+	server   *grpc.Server
 
 	ctx       context.Context
 	cancel    context.CancelFunc
