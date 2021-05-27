@@ -51,6 +51,7 @@ func (c *Command) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) 
 
 	stream, err := client.GetFiles(context.Background(), &proto.ListRequest{
 		Prefix: c.prefix,
+		Limit:  int32(c.limit),
 	})
 	if err != nil {
 		return shared.Exitf("Error fetching results: %v", err)

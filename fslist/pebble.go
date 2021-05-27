@@ -142,13 +142,19 @@ func (s *PebbleList) copySet(ch chan<- AddData, keyPrefix string, opts ReadOptio
 	iter := s.db.NewIter(iterOpts)
 	defer iter.Close()
 
+	count := 0
 	for iter.First(); iter.Valid(); iter.Next() {
+		if opts.Limit > 0 && count >= opts.Limit {
+			return nil
+		}
+
 		var data AddData
 		if err := json.Unmarshal(iter.Value(), &data); err != nil {
 			return err
 		}
 
 		ch <- data
+		count++
 	}
 
 	return nil
