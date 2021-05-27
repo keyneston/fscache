@@ -2,7 +2,7 @@ syntax = "proto3";
 
 import "google/protobuf/empty.proto";
 
-option go_package = "github.com/keyneston/fscachemonitor/proto";
+option go_package = "github.com/keyneston/fscache/proto";
 
 message ListRequest {
   string prefix = 1;

@@ -8,7 +8,7 @@ import (
 	"sync"
 
 	"github.com/google/subcommands"
-	"github.com/keyneston/fscachemonitor/proto"
+	"github.com/keyneston/fscache/proto"
 	"google.golang.org/grpc"
 )
 

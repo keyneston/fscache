@@ -5,7 +5,7 @@ import (
 	"flag"
 
 	"github.com/google/subcommands"
-	"github.com/keyneston/fscachemonitor/internal/shared"
+	"github.com/keyneston/fscache/internal/shared"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -16,7 +16,7 @@ type Command struct {
 }
 
 func (*Command) Name() string     { return "stop" }
-func (*Command) Synopsis() string { return "Stop running fscachemonitor" }
+func (*Command) Synopsis() string { return "Stop running fscache" }
 func (*Command) Usage() string {
 	return `stop:
 `
@@ -31,7 +31,7 @@ func (c *Command) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) 
 
 	client, err := c.Client()
 	if err != nil {
-		return shared.Exitf("Error connecting to fscachemonitor: %v", err)
+		return shared.Exitf("Error connecting to fscache: %v", err)
 	}
 
 	if _, err := client.Shutdown(context.Background(), &emptypb.Empty{}); err != nil {

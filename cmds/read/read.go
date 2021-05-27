@@ -8,8 +8,8 @@ import (
 	"os"
 
 	"github.com/google/subcommands"
-	"github.com/keyneston/fscachemonitor/internal/shared"
-	"github.com/keyneston/fscachemonitor/proto"
+	"github.com/keyneston/fscache/internal/shared"
+	"github.com/keyneston/fscache/proto"
 	"github.com/sirupsen/logrus"
 )
 
@@ -46,7 +46,7 @@ func (c *Command) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) 
 
 	client, err := c.Client()
 	if err != nil {
-		return shared.Exitf("Error connecting to fscachemonitor: %v", err)
+		return shared.Exitf("Error connecting to fscache: %v", err)
 	}
 
 	stream, err := client.GetFiles(context.Background(), &proto.ListRequest{

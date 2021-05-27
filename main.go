@@ -6,10 +6,10 @@ import (
 	"os"
 
 	"github.com/google/subcommands"
-	"github.com/keyneston/fscachemonitor/cmds/read"
-	"github.com/keyneston/fscachemonitor/cmds/run"
-	"github.com/keyneston/fscachemonitor/cmds/stop"
-	"github.com/keyneston/fscachemonitor/internal/shared"
+	"github.com/keyneston/fscache/cmds/read"
+	"github.com/keyneston/fscache/cmds/run"
+	"github.com/keyneston/fscache/cmds/stop"
+	"github.com/keyneston/fscache/internal/shared"
 )
 
 func main() {

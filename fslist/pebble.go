@@ -6,7 +6,7 @@ import (
 	"os"
 
 	"github.com/cockroachdb/pebble"
-	"github.com/keyneston/fscachemonitor/internal/shared"
+	"github.com/keyneston/fscache/internal/shared"
 	"github.com/sirupsen/logrus"
 )
 

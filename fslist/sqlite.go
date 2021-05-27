@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 
 	sq "github.com/Masterminds/squirrel"
-	"github.com/keyneston/fscachemonitor/internal/shared"
+	"github.com/keyneston/fscache/internal/shared"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -25,7 +25,7 @@ func NewSQL() (FSList, error) {
 }
 
 func OpenSQL() (FSList, error) {
-	location, err := os.MkdirTemp("", "fscachemonitor-data-*")
+	location, err := os.MkdirTemp("", "fscache-data-*")
 	if err != nil {
 		return nil, err
 	}

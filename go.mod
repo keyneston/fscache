@@ -1,4 +1,4 @@
-module github.com/keyneston/fscachemonitor
+module github.com/keyneston/fscache
 
 go 1.16
 

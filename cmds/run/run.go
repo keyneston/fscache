@@ -7,9 +7,9 @@ import (
 	"os"
 
 	"github.com/google/subcommands"
-	"github.com/keyneston/fscachemonitor/fscache"
-	"github.com/keyneston/fscachemonitor/fslist"
-	"github.com/keyneston/fscachemonitor/internal/shared"
+	"github.com/keyneston/fscache/fscache"
+	"github.com/keyneston/fscache/fslist"
+	"github.com/keyneston/fscache/internal/shared"
 )
 
 type Command struct {
@@ -20,7 +20,7 @@ type Command struct {
 }
 
 func (*Command) Name() string     { return "run" }
-func (*Command) Synopsis() string { return "Run fscachemonitor" }
+func (*Command) Synopsis() string { return "Run fscache" }
 func (*Command) Usage() string {
 	return `run:
 `
@@ -57,7 +57,7 @@ func (c *Command) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) 
 	if ok, err := pid.Acquire(); err != nil {
 		return shared.Exitf("Error starting monitor: %v", err)
 	} else if !ok {
-		fmt.Fprintf(os.Stdout, "fscachemonitor is already running\n")
+		fmt.Fprintf(os.Stdout, "fscache is already running\n")
 		return subcommands.ExitSuccess
 	}
 
