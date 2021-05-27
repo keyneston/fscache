@@ -1,0 +1,18 @@
+syntax = "proto3";
+option go_package = "github.com/keyneston/fscachemonitor/proto";
+
+message ListRequest {
+  string prefix = 1;
+  int32 limit = 2;
+}
+
+message File {
+  string name = 1;
+  bool dir = 2;
+  // UpdatedAt is encoded as a UnixTime
+  int64 updated_at = 3;
+}
+
+service FSCache {
+  rpc GetFiles(ListRequest) returns (stream File) {}
+}

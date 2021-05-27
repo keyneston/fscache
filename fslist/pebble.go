@@ -42,6 +42,8 @@ func openPebble(location string) (FSList, error) {
 		return nil, fmt.Errorf("Must supply a location for the database")
 	}
 
+	// location should be a socket, then we create the DB in a tmp dir each time.
+
 	db, err := pebble.Open(location, &pebble.Options{
 		DisableWAL: true, // Database is wiped away at start, so WAL is not needed.
 	})
