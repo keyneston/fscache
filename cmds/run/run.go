@@ -65,6 +65,7 @@ func (c *Command) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) 
 	if err != nil {
 		return shared.Exitf("Error starting monitor: %v", err)
 	}
+
 	fs.Run()
 
 	return subcommands.ExitSuccess

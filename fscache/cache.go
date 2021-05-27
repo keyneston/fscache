@@ -1,6 +1,7 @@
 package fscache
 
 import (
+	"context"
 	"net"
 	"os"
 	"path/filepath"
@@ -14,6 +15,7 @@ import (
 	"github.com/keyneston/fscachemonitor/watcher"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 var _ proto.FSCacheServer = &FSCache{}
@@ -29,8 +31,9 @@ type FSCache struct {
 	socketLocation string
 	server         *grpc.Server
 
-	closeCh   chan interface{}
-	closeOnce sync.Once
+	ctx       context.Context
+	cancel    context.CancelFunc
+	closeOnce *sync.Once
 
 	logger *logrus.Logger
 }
@@ -46,12 +49,17 @@ func New(socketLocation, root string, mode fslist.Mode) (*FSCache, error) {
 		return nil, err
 	}
 
+	ctx, cancel := context.WithCancel(context.Background())
+
 	fs := &FSCache{
-		Root:    root,
-		watcher: watcher,
-		socket:  socket,
-		logger:  shared.Logger().WithField("object", "fscache").Logger,
-		server:  grpc.NewServer(),
+		Root:      root,
+		watcher:   watcher,
+		socket:    socket,
+		logger:    shared.Logger().WithField("object", "fscache").Logger,
+		server:    grpc.NewServer(),
+		cancel:    cancel,
+		ctx:       ctx,
+		closeOnce: &sync.Once{},
 	}
 
 	proto.RegisterFSCacheServer(fs.server, fs)
@@ -76,7 +84,8 @@ func (fs *FSCache) Run() {
 			for _, e := range events {
 				fs.handleEvent(e)
 			}
-		case <-fs.closeCh:
+		case <-fs.ctx.Done():
+			fs.logger.WithError(fs.ctx.Err()).Warn("Receive context.Done")
 			return
 		}
 	}
@@ -91,43 +100,44 @@ func eventToAddData(e watcher.Event) fslist.AddData {
 }
 
 func (fs *FSCache) handleEvent(e watcher.Event) {
-	logger := shared.Logger()
 	// TODO: find a better way:
 	for _, seg := range strings.Split(e.Path, "/") {
 		if skipFile(seg) {
-			logger.Debugf("Skipping %q", e.Path)
+			fs.logger.Debugf("Skipping %q", e.Path)
 			return
 		}
 	}
 
 	switch e.Type {
 	case watcher.EventTypeDelete:
-		logger.Tracef("Removing %q", e.Path)
+		fs.logger.Tracef("Removing %q", e.Path)
 		if err := fs.fileList.Delete(eventToAddData(e)); err != nil {
-			logger.Errorf("Error deleting file: %v", err)
+			fs.logger.Errorf("Error deleting file: %v", err)
 		}
 	case watcher.EventTypeAdd:
-		logger.Tracef("Adding %q", e.Path)
+		fs.logger.Tracef("Adding %q", e.Path)
 		if err := fs.fileList.Add(eventToAddData(e)); err != nil {
-			logger.Errorf("Error adding file: %v", err)
+			fs.logger.Errorf("Error adding file: %v", err)
 		}
 	}
 }
 
 func (fs *FSCache) Close() {
 	fs.closeOnce.Do(func() {
-		fs.server.Stop()
+		fs.logger.Warn("Received stop, shutting down")
 		fs.watcher.Stop()
-		close(fs.closeCh)
+		fs.cancel()
+		go fs.server.GracefulStop()
 	})
 }
 
 // init does the initial setup of walking
 func (fs *FSCache) init() {
 	filepath.WalkDir(fs.Root, func(path string, d os.DirEntry, err error) error {
-		if err != nil {
-			shared.Logger().Errorf("Error during init: %v", err)
-			return nil
+		select {
+		case <-fs.ctx.Done():
+			return fs.ctx.Err()
+		default:
 		}
 
 		if skipFile(path) {
@@ -178,4 +188,9 @@ func (fs *FSCache) GetFiles(req *proto.ListRequest, srv proto.FSCache_GetFilesSe
 	}
 
 	return nil
+}
+
+func (fs *FSCache) Shutdown(ctx context.Context, req *emptypb.Empty) (*emptypb.Empty, error) {
+	fs.Close()
+	return req, nil
 }

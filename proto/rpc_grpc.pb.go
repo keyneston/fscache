@@ -4,9 +4,11 @@ package proto
 
 import (
 	context "context"
+
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
+	emptypb "google.golang.org/protobuf/types/known/emptypb"
 )
 
 // This is a compile-time assertion to ensure that this generated file
@@ -19,6 +21,7 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type FSCacheClient interface {
 	GetFiles(ctx context.Context, in *ListRequest, opts ...grpc.CallOption) (FSCache_GetFilesClient, error)
+	Shutdown(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
 type fSCacheClient struct {
@@ -61,11 +64,21 @@ func (x *fSCacheGetFilesClient) Recv() (*File, error) {
 	return m, nil
 }
 
+func (c *fSCacheClient) Shutdown(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, "/FSCache/Shutdown", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // FSCacheServer is the server API for FSCache service.
 // All implementations must embed UnimplementedFSCacheServer
 // for forward compatibility
 type FSCacheServer interface {
 	GetFiles(*ListRequest, FSCache_GetFilesServer) error
+	Shutdown(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
 	mustEmbedUnimplementedFSCacheServer()
 }
 
@@ -75,6 +88,9 @@ type UnimplementedFSCacheServer struct {
 
 func (UnimplementedFSCacheServer) GetFiles(*ListRequest, FSCache_GetFilesServer) error {
 	return status.Errorf(codes.Unimplemented, "method GetFiles not implemented")
+}
+func (UnimplementedFSCacheServer) Shutdown(context.Context, *emptypb.Empty) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Shutdown not implemented")
 }
 func (UnimplementedFSCacheServer) mustEmbedUnimplementedFSCacheServer() {}
 
@@ -110,13 +126,36 @@ func (x *fSCacheGetFilesServer) Send(m *File) error {
 	return x.ServerStream.SendMsg(m)
 }
 
+func _FSCache_Shutdown_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FSCacheServer).Shutdown(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/FSCache/Shutdown",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FSCacheServer).Shutdown(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // FSCache_ServiceDesc is the grpc.ServiceDesc for FSCache service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var FSCache_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "FSCache",
 	HandlerType: (*FSCacheServer)(nil),
-	Methods:     []grpc.MethodDesc{},
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "Shutdown",
+			Handler:    _FSCache_Shutdown_Handler,
+		},
+	},
 	Streams: []grpc.StreamDesc{
 		{
 			StreamName:    "GetFiles",

@@ -1,4 +1,7 @@
 syntax = "proto3";
+
+import "google/protobuf/empty.proto";
+
 option go_package = "github.com/keyneston/fscachemonitor/proto";
 
 message ListRequest {
@@ -15,5 +18,6 @@ message File {
 }
 
 service FSCache {
-  rpc GetFiles(ListRequest) returns (stream File) {}
+  rpc GetFiles(ListRequest) returns (stream File);
+  rpc Shutdown(google.protobuf.Empty) returns (google.protobuf.Empty);
 }
