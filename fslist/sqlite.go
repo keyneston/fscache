@@ -3,7 +3,8 @@ package fslist
 import (
 	"database/sql"
 	"fmt"
-	"io"
+	"os"
+	"path/filepath"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/keyneston/fscachemonitor/internal/shared"
@@ -13,13 +14,8 @@ import (
 
 var _ FSList = &SQList{}
 
-func NewSQL(location string) (FSList, error) {
-	if location == "" {
-		return nil, fmt.Errorf("Must supply a location for the database")
-	}
-
-	shared.Logger().WithField("database", location).Debugf("new sqlite3 database")
-	list, err := OpenSQL(location)
+func NewSQL() (FSList, error) {
+	list, err := OpenSQL()
 	if err != nil {
 		return nil, err
 	}
@@ -28,7 +24,13 @@ func NewSQL(location string) (FSList, error) {
 	return s, s.init()
 }
 
-func OpenSQL(location string) (FSList, error) {
+func OpenSQL() (FSList, error) {
+	location, err := os.MkdirTemp("", "fscachemonitor-data-*")
+	if err != nil {
+		return nil, err
+	}
+	location = filepath.Join(location, "fscache.sqlite")
+
 	shared.Logger().WithField("database", location).Debugf("opening sqlite3 database")
 	db, err := sql.Open("sqlite3", fmt.Sprintf("file:%s", location))
 	if err != nil {
@@ -36,8 +38,7 @@ func OpenSQL(location string) (FSList, error) {
 	}
 
 	s := &SQList{
-		db:       db,
-		location: location,
+		db: db,
 	}
 
 	return s, nil
@@ -82,10 +83,10 @@ INSERT INTO files (filename, updated_at, dir) VALUES ($1, $2, $3) ON CONFLICT(fi
 	return err
 }
 
-func (s *SQList) Delete(name string) error {
+func (s *SQList) Delete(data AddData) error {
 	sqlStmt := `delete from files where filename = $1`
 
-	_, err := s.db.Exec(sqlStmt, name)
+	_, err := s.db.Exec(sqlStmt, data.Name)
 	return err
 }
 
@@ -94,52 +95,65 @@ func (s *SQList) Len() int {
 	return 0
 }
 
-func (s *SQList) Copy(w io.Writer, opts ReadOptions) error {
-	shared.Logger().WithField("options", opts).Debugf("Copy called")
-	// sqlite interprets a negative limit as all rows
-	stmt := sq.Select("filename").From("files")
+func (s *SQList) Fetch(opts ReadOptions) <-chan AddData {
+	ch := make(chan AddData, 1)
 
-	if opts.DirsOnly {
-		stmt = stmt.Where(sq.Eq{"dir": true})
-	}
+	go func() {
+		defer close(ch)
 
-	if opts.Prefix != "" {
-		stmt = stmt.Where(sq.Like{"filename": fmt.Sprintf("%s%%", opts.Prefix)})
-	}
+		logger := shared.Logger().WithField("options", opts)
+		logger.Debugf("Copy called")
 
-	if opts.Limit > 0 {
-		stmt = stmt.OrderBy("updated_at DESC").Limit(uint64(opts.Limit))
-	}
+		// sqlite interprets a negative limit as all rows
+		stmt := sq.Select("filename").From("files")
 
-	if opts.Limit == 0 {
-		opts.Limit = -1
-	}
-
-	sqlStmt, args, err := stmt.ToSql()
-	if err != nil {
-		return err
-	}
-
-	shared.Logger().WithField("sql", sqlStmt).Debugf("executing sql")
-
-	rows, err := s.db.Query(sqlStmt, args...)
-	if err != nil {
-		return err
-	}
-	defer rows.Close()
-
-	count := 0
-	for rows.Next() {
-		var filename string
-
-		if err := rows.Scan(&filename); err != nil {
-			return err
+		if opts.DirsOnly {
+			stmt = stmt.Where(sq.Eq{"dir": true})
 		}
 
-		fmt.Fprintln(w, filename)
-		count++
-	}
-	shared.Logger().WithField("rows", count).Debugf("Finished copying")
+		if opts.Prefix != "" {
+			stmt = stmt.Where(sq.Like{"filename": fmt.Sprintf("%s%%", opts.Prefix)})
+		}
 
-	return nil
+		if opts.Limit > 0 {
+			stmt = stmt.OrderBy("updated_at DESC").Limit(uint64(opts.Limit))
+		}
+
+		if opts.Limit == 0 {
+			opts.Limit = -1
+		}
+
+		sqlStmt, args, err := stmt.ToSql()
+		if err != nil {
+			logger.WithError(err).Error()
+			return
+		}
+
+		logger.WithField("sql", sqlStmt).Debugf("executing sql")
+
+		rows, err := s.db.Query(sqlStmt, args...)
+		if err != nil {
+			logger.WithError(err).Error()
+			return
+		}
+		defer rows.Close()
+
+		count := 0
+		for rows.Next() {
+			var filename string
+
+			if err := rows.Scan(&filename); err != nil {
+				logger.WithError(err).Error()
+				return
+			}
+
+			ch <- AddData{
+				Name: filename,
+			}
+			count++
+		}
+		shared.Logger().WithField("rows", count).Debugf("Finished copying")
+	}()
+
+	return ch
 }

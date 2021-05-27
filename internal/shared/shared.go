@@ -8,25 +8,29 @@ import (
 	"sync"
 
 	"github.com/google/subcommands"
+	"github.com/keyneston/fscachemonitor/proto"
+	"google.golang.org/grpc"
 )
 
 type Config struct {
 	PIDFile string
 
-	cache string
+	socket string
 
 	globalOnce sync.Once
 }
 
+var DefaultSocketLocation = "${HOME}/.cache/fscache.socket"
+
 func (c *Config) SetFlags(f *flag.FlagSet) {
 	f.BoolVar(&debug, "debug", false, "Enable verbose debug logging")
 	f.StringVar(&c.PIDFile, "pid", "{home}/.cache/{cache}.pid", "Which PID file to use")
-	f.StringVar(&c.cache, "cache", "", "Manually set cache, defaults to ~/.cache/fscache.sqlite")
+	f.StringVar(&c.socket, "socket", "", "Where to place the communications socket, defaults to ~/.cache/fscache.socket")
 
 	c.globalOnce.Do(func() {
 		flag.BoolVar(&debug, "debug", false, "Enable verbose debug logging")
 		flag.StringVar(&c.PIDFile, "pid", "{home}/.cache/{cache}.pid", "Which PID file to use")
-		flag.StringVar(&c.cache, "cache", "", "Manually set cache, defaults to ~/.cache/fscache.sqlite")
+		flag.StringVar(&c.socket, "socket", "", "Where to place the communications socket, defaults to ~/.cache/fscache.socket")
 	})
 }
 
@@ -37,18 +41,29 @@ func (c *Config) RegisterGlobal() {
 	c.SetFlags(flag.NewFlagSet("", flag.ContinueOnError))
 }
 
-var DefaultCacheLocation = "${HOME}/.cache/fscache.sqlite"
+func (c *Config) Client() (proto.FSCacheClient, error) {
+	socket, err := c.SocketLocation()
+	if err != nil {
+		return nil, err
+	}
 
-func (c *Config) CacheLocation() (string, error) {
-	if c.cache != "" {
-		return c.cache, nil
+	conn, err := grpc.Dial(fmt.Sprintf("unix:%s", socket), grpc.WithInsecure())
+	if err != nil {
+		return nil, err
+	}
+	return proto.NewFSCacheClient(conn), nil
+}
+
+func (c *Config) SocketLocation() (string, error) {
+	if c.socket != "" {
+		return c.socket, nil
 	}
 
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return "", err
 	}
-	return strings.Replace(DefaultCacheLocation, "${HOME}", home, -1), nil
+	return strings.Replace(DefaultSocketLocation, "${HOME}", home, -1), nil
 }
 
 func Exitf(format string, vars ...interface{}) subcommands.ExitStatus {

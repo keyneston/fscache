@@ -2,12 +2,15 @@ package read
 
 import (
 	"context"
+	"errors"
 	"flag"
+	"io"
 	"os"
 
 	"github.com/google/subcommands"
-	"github.com/keyneston/fscachemonitor/fslist"
 	"github.com/keyneston/fscachemonitor/internal/shared"
+	"github.com/keyneston/fscachemonitor/proto"
+	"github.com/sirupsen/logrus"
 )
 
 type Command struct {
@@ -15,6 +18,8 @@ type Command struct {
 
 	dirOnly bool
 	prefix  string
+	mode    string
+	logger  *logrus.Logger
 
 	limit int
 }
@@ -31,33 +36,44 @@ func (c *Command) SetFlags(f *flag.FlagSet) {
 
 	f.StringVar(&c.prefix, "p", "", "Prefix to limit paths returned")
 	f.StringVar(&c.prefix, "prefix", "", "Alias for -p")
+	f.StringVar(&c.mode, "mode", "sql", "DB mode; experimental")
 	f.IntVar(&c.limit, "n", 0, "Number of items to return. 0 for all")
 	f.BoolVar(&c.dirOnly, "d", false, "Only return directories")
 }
 
 func (c *Command) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
-	logger := shared.Logger()
+	c.logger = shared.Logger().WithField("command", "read").Logger
 
-	cache, err := c.CacheLocation()
+	client, err := c.Client()
 	if err != nil {
-		return shared.Exitf("Error getting database file: %v", err)
+		return shared.Exitf("Error connecting to fscachemonitor: %v", err)
 	}
 
-	logger.Debugf("About to open")
-	list, err := fslist.Open(cache, fslist.ModeSQL)
+	stream, err := client.GetFiles(context.Background(), &proto.ListRequest{
+		Prefix: c.prefix,
+	})
 	if err != nil {
-		return shared.Exitf("Error opening database: %v", err)
+		return shared.Exitf("Error fetching results: %v", err)
 	}
 
-	logger.Debugf("About to copy")
-	if err := list.Copy(os.Stdout, fslist.ReadOptions{
-		Limit:    c.limit,
-		DirsOnly: c.dirOnly,
-		Prefix:   c.prefix,
-	}); err != nil {
-		return shared.Exitf("Error reading database: %v", err)
+	c.logger.Debugf("Got stream")
+	for {
+		file, err := stream.Recv()
+		if errors.Is(err, io.EOF) {
+			break
+		}
+		if err != nil {
+			return shared.Exitf("Error fetching all results: %v", err)
+		}
+
+		if file == nil {
+			continue
+		}
+		os.Stdout.WriteString(file.Name)
+		os.Stdout.Write([]byte{'\n'})
 	}
-	logger.Debugf("Finished copying")
+
+	c.logger.WithError(err).Debugf("Done")
 
 	return subcommands.ExitSuccess
 }
