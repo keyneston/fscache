@@ -8,7 +8,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/google/subcommands"
 	"github.com/keyneston/fscache/internal/shared"
@@ -51,6 +50,11 @@ func (c *Command) SetFlags(f *flag.FlagSet) {
 func (c *Command) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
 	c.logger = shared.Logger().WithField("command", "read").Logger
 
+	cwd, err := os.Getwd()
+	if err != nil {
+		return shared.Exitf("Error finding cwd: %v", err)
+	}
+
 	if c.root && c.prefix == "" {
 		root, err := findRoot()
 		if err != nil {
@@ -92,8 +96,9 @@ func (c *Command) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) 
 		}
 		for _, file := range files.Files {
 			name := file.Name
-			if c.prefix != "" {
-				name = strings.TrimPrefix(name, c.prefix)
+			name, err = filepath.Rel(cwd, name)
+			if err != nil {
+				return shared.Exitf("Error getting relative path: %v", err)
 			}
 
 			os.Stdout.WriteString(name)
