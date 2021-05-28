@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/cockroachdb/pebble"
 	"github.com/keyneston/fscache/internal/shared"
@@ -18,8 +19,9 @@ const (
 var _ FSList = &PebbleList{}
 
 type PebbleList struct {
-	db       *pebble.DB
-	location string
+	db          *pebble.DB
+	location    string
+	ignoreCache *IgnoreCache
 
 	logger *logrus.Entry
 }
@@ -55,9 +57,10 @@ func openPebble() (FSList, error) {
 	}
 
 	s := &PebbleList{
-		db:       db,
-		location: location,
-		logger:   logger,
+		db:          db,
+		ignoreCache: &IgnoreCache{},
+		location:    location,
+		logger:      logger,
 	}
 
 	return s, nil
@@ -83,8 +86,15 @@ func (s *PebbleList) Add(data AddData) error {
 		return err
 	}
 
-	if err := s.db.Set(data.key(), encoded, pebble.NoSync); err != nil {
+	name := []byte(data.Name)
+	if err := s.db.Set(name, encoded, pebble.NoSync); err != nil {
 		return err
+	}
+
+	if filepath.Base(data.Name) == ".gitignore" {
+		if err := s.ignoreCache.Add(data.Name); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -92,7 +102,7 @@ func (s *PebbleList) Add(data AddData) error {
 
 func (s *PebbleList) Delete(data AddData) error {
 	s.logger.WithField("data", data).Tracef("Deleting")
-	return s.db.Delete(data.key(), pebble.NoSync)
+	return s.db.Delete([]byte(data.Name), pebble.NoSync)
 }
 
 func (s *PebbleList) Len() int {
@@ -104,11 +114,12 @@ func (s *PebbleList) newPebbleFetcher(opts ReadOptions) (*pebbleFetcher, <-chan 
 	ch := make(chan AddData, 1)
 
 	return &pebbleFetcher{
-		db:     s.db,
-		logger: s.logger.WithField("module", "pebbleFetcher").Logger,
-		ch:     ch,
-		opts:   opts,
-		count:  0,
+		db:          s.db,
+		ignoreCache: s.ignoreCache,
+		logger:      s.logger.WithField("module", "pebbleFetcher").Logger,
+		ch:          ch,
+		opts:        opts,
+		count:       0,
 	}, ch
 }
 

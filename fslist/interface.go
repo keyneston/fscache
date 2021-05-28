@@ -1,7 +1,6 @@
 package fslist
 
 import (
-	"bytes"
 	"fmt"
 	"time"
 )
@@ -10,20 +9,6 @@ type AddData struct {
 	Name      string
 	UpdatedAt time.Time
 	IsDir     bool
-}
-
-func (a AddData) key() []byte {
-	key := bytes.NewBuffer(make([]byte, 0, len(a.Name)+5))
-
-	if a.IsDir {
-		key.WriteString(dirPrefix)
-	} else {
-		key.WriteString(filePrefix)
-	}
-
-	key.WriteString(a.Name)
-
-	return key.Bytes()
 }
 
 type FSList interface {
