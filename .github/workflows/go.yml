@@ -2,9 +2,9 @@ name: Go
 
 on:
   push:
-    branches: [ master ]
+    branches: [ main ]
   pull_request:
-    branches: [ master ]
+    branches: [ main ]
 
 jobs:
 
@@ -25,9 +25,6 @@ jobs:
     - name: Install Brews
       run: |
         brew install protobuf protoc-gen-go protoc-gen-go-grpc fswatch
-
-    - name: Build
-      run: go build -v ./...
 
     - name: Test
       run: go test -v ./...
