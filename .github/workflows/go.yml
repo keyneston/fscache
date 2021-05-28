@@ -21,7 +21,7 @@ jobs:
 
     - name: Install Brews
       run: |
-        brew install go protobuf protoc-gen-go protoc-gen-go-grpc fswatch
+        brew install --overwrite go protobuf protoc-gen-go protoc-gen-go-grpc fswatch
 
     - name: Test
       run: go test -v ./...
