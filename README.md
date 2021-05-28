@@ -26,6 +26,8 @@ provide some tools for reading from it and quickly filtering it down to
 relevant data. This made working in the monorepo quick, and allowed me to hop
 around from my home directory.
 
+# Integrations
+
 ## CtrlP & VIM
 
 `fscache` can be used with VIM and CtrlP by using something like the following
@@ -38,6 +40,15 @@ let g:ctrlp_user_command = {
   \   },
   \   'fallback': 'fscache read'
   \ }
+```
+
+## FZF-VIM
+
+To integrate with [fzf-vim](https://github.com/junegunn/fzf.vim) simply add
+the following to your `vimrc`.
+
+```vim
+let $FZF_DEFAULT_COMMAND='fscache read -r'
 ```
 
 ## FZF
