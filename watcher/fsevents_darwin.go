@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/fsnotify/fsevents"
-	"github.com/sirupsen/logrus"
+	"github.com/keyneston/fscache/internal/shared"
 )
 
 func New(root string) (Watcher, error) {
@@ -67,7 +67,7 @@ func (d *DarwinWatcher) handleEvents(events []fsevents.Event) {
 		stat, err := os.Stat(e.Path)
 		if err != nil {
 			if !errors.Is(err, os.ErrNotExist) {
-				logrus.WithField("path", e.Path).Error(err)
+				shared.Logger().WithField("service", "watcher").WithField("path", e.Path).Error(err)
 			}
 
 			continue // TODO Should we do something else here?
