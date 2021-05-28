@@ -59,9 +59,9 @@ func (d *DarwinWatcher) handleEvents(events []fsevents.Event) {
 		t := Event{Path: e.Path}
 		switch {
 		case checkFlag(e.Flags, fsevents.ItemRemoved):
-			t.Type = EventTypeAdd
-		case checkFlag(e.Flags, fsevents.ItemCreated):
 			t.Type = EventTypeDelete
+		case checkFlag(e.Flags, fsevents.ItemCreated):
+			t.Type = EventTypeAdd
 		}
 
 		stat, err := os.Stat(e.Path)

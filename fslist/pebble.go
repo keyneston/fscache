@@ -89,6 +89,7 @@ func (s *PebbleList) Add(data AddData) error {
 }
 
 func (s *PebbleList) Delete(data AddData) error {
+	s.logger.WithField("data", data).Tracef("Deleting")
 	return s.db.Delete(data.key(), pebble.NoSync)
 }
 
