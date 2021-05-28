@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/google/subcommands"
@@ -17,11 +18,12 @@ import (
 
 type Command struct {
 	*shared.Config
+	logger *logrus.Logger
 
 	dirsOnly bool
 	prefix   string
 	mode     string
-	logger   *logrus.Logger
+	root     bool
 
 	limit     int
 	batchSize int
@@ -38,6 +40,7 @@ func (c *Command) SetFlags(f *flag.FlagSet) {
 	c.Config.SetFlags(f)
 
 	f.StringVar(&c.prefix, "p", "", "Prefix to limit paths returned")
+	f.BoolVar(&c.root, "r", false, "Auto discover root")
 	f.StringVar(&c.prefix, "prefix", "", "Alias for -p")
 	f.StringVar(&c.mode, "mode", "sql", "DB mode; experimental")
 	f.IntVar(&c.limit, "n", 0, "Number of items to return. 0 for all")
@@ -47,6 +50,15 @@ func (c *Command) SetFlags(f *flag.FlagSet) {
 
 func (c *Command) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
 	c.logger = shared.Logger().WithField("command", "read").Logger
+
+	if c.root && c.prefix == "" {
+		root, err := findRoot()
+		if err != nil {
+			return shared.Exitf("Error finding root: %v", err)
+		}
+
+		c.prefix = root
+	}
 
 	client, err := c.Client()
 	if err != nil {
@@ -105,4 +117,45 @@ func cleanPrefix(prefix string) string {
 		prefix = fmt.Sprintf("%s/", prefix)
 	}
 	return prefix
+}
+
+var roots = map[string]bool{
+	".git": true,
+	".svn": true,
+	".hg":  true,
+}
+
+func findRoot() (string, error) {
+	dir, err := os.Getwd()
+	if err != nil {
+		return "", err
+	}
+
+	for {
+		if dir == "/" {
+			return dir, nil
+		}
+
+		files, err := os.ReadDir(dir)
+		if err != nil {
+			return "", err
+		}
+
+		for _, f := range files {
+			name := f.Name()
+
+			// Only check dot files. These (should?!?) come before non dot
+			// files, so abort as soon as we hit non dot files
+			if name[0] != '.' {
+				break
+			}
+			if _, ok := roots[name]; ok {
+				return dir, nil
+			}
+		}
+
+		dir = filepath.Dir(dir)
+	}
+
+	return "/", nil
 }
