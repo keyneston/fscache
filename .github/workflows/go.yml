@@ -20,6 +20,7 @@ jobs:
       uses: Homebrew/actions/setup-homebrew@master
 
     - name: Cache homebrew
+      id: cache
       uses: actions/cache@v2
       with:
          path: |
@@ -27,6 +28,7 @@ jobs:
          key: ${{ runner.os }}-${{ hashFiles('**/go.yml') }} # Hash based on this file
 
     - name: Install Brews
+      if: steps.cache.outputs.cache-hit != 'true'
       run: |
         brew install protobuf protoc-gen-go protoc-gen-go-grpc fswatch
         brew install go || true
