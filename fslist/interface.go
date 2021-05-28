@@ -32,6 +32,7 @@ type FSList interface {
 	Delete(AddData) error
 	Len() int
 	Fetch(ReadOptions) <-chan AddData
+	Flush() error
 }
 
 type ReadOptions struct {

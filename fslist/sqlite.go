@@ -157,3 +157,8 @@ func (s *SQList) Fetch(opts ReadOptions) <-chan AddData {
 
 	return ch
 }
+
+func (s *SQList) Flush() error {
+	// NOOP because SQL doesn't need to flush.
+	return nil
+}

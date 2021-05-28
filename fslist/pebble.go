@@ -160,3 +160,7 @@ func (s *PebbleList) copySet(ch chan<- AddData, keyPrefix string, opts ReadOptio
 
 	return nil
 }
+
+func (s *PebbleList) Flush() error {
+	return s.db.Flush()
+}
