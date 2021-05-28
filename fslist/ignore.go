@@ -4,6 +4,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/keyneston/fscache/internal/shared"
 	"github.com/monochromegane/go-gitignore"
 )
 
@@ -17,7 +18,10 @@ func (ic *IgnoreCache) Add(file string) error {
 	}
 
 	// TODO: find earlier gitignores
-	matcher, err := gitignore.NewGitIgnore(file)
+	superior := ic.findSuperior(file)
+	shared.Logger().WithField("module", "IgnoreCache").WithField("file", file).WithField("superior", superior).Error()
+
+	matcher, err := gitignore.NewGitIgnore(file, ic.findSuperior(file)...)
 	if err != nil {
 		return err
 	}
@@ -38,4 +42,18 @@ func (ic *IgnoreCache) Get(file string) gitignore.IgnoreMatcher {
 	}
 
 	return nil
+}
+
+func (ic *IgnoreCache) findSuperior(file string) []string {
+	res := []string{}
+
+	segments := strings.SplitAfter(filepath.Clean(file), "/")
+	for i := range segments {
+		name := filepath.Join(segments[0:i]...)
+		if _, ok := ic.cache[name]; ok {
+			res = append(res, name)
+		}
+	}
+
+	return res
 }

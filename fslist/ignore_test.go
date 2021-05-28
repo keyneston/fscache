@@ -17,14 +17,7 @@ func (fakeMatcher) Match(string, bool) bool {
 }
 
 func TestIgnoreCache_Get(t *testing.T) {
-	ic := IgnoreCache{
-		cache: map[string]gitignore.IgnoreMatcher{},
-	}
-
-	dirs := []string{"/foo/bar/baz", "/foo/bar/baz/qaz"}
-	for _, d := range dirs {
-		ic.cache[d] = fakeMatcher{name: d}
-	}
+	ic := buildFakeIC("/foo/bar/baz", "/foo/bar/baz/qaz")
 
 	type testCase struct {
 		input    string
@@ -50,4 +43,39 @@ func TestIgnoreCache_Get(t *testing.T) {
 		assert.Equal(t, fake.name, c.expected)
 
 	}
+}
+
+func TestIgnoreCache_findSuperior(t *testing.T) {
+	type testCase struct {
+		levels   []string
+		input    string
+		expected []string
+	}
+
+	testCases := []testCase{
+		{
+			levels:   []string{"/", "/foo", "/foo/bar"},
+			input:    "/foo/bar/baz",
+			expected: []string{"/", "/foo", "/foo/bar"},
+		},
+	}
+
+	for _, c := range testCases {
+		ic := buildFakeIC(c.levels...)
+
+		res := ic.findSuperior(c.input)
+		assert.ElementsMatch(t, c.expected, res)
+	}
+}
+
+func buildFakeIC(paths ...string) *IgnoreCache {
+	ic := &IgnoreCache{
+		cache: map[string]gitignore.IgnoreMatcher{},
+	}
+
+	for _, d := range paths {
+		ic.cache[d] = fakeMatcher{name: d}
+	}
+
+	return ic
 }
