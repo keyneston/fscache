@@ -36,9 +36,10 @@ type FSList interface {
 }
 
 type ReadOptions struct {
-	Limit    int
-	DirsOnly bool
-	Prefix   string
+	Limit      int
+	DirsOnly   bool
+	Prefix     string
+	CurrentDir string
 }
 
 type Mode = string

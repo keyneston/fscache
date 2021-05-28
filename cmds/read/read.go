@@ -72,10 +72,11 @@ func (c *Command) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) 
 	c.prefix = cleanPrefix(c.prefix)
 
 	stream, err := client.GetFiles(context.Background(), &proto.ListRequest{
-		Prefix:    c.prefix,
-		Limit:     int32(c.limit),
-		BatchSize: int32(c.batchSize),
-		DirsOnly:  c.dirsOnly,
+		Prefix:     c.prefix,
+		Limit:      int32(c.limit),
+		BatchSize:  int32(c.batchSize),
+		DirsOnly:   c.dirsOnly,
+		CurrentDir: cleanPrefix(cwd),
 	})
 	if err != nil {
 		return shared.Exitf("Error fetching results: %v", err)

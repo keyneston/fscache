@@ -197,9 +197,10 @@ func (fs *FSCache) GetFiles(req *proto.ListRequest, srv proto.FSCache_GetFilesSe
 	fs.logger.WithField("req", req).Debugf("Received request")
 
 	opts := fslist.ReadOptions{
-		DirsOnly: req.DirsOnly,
-		Prefix:   req.Prefix,
-		Limit:    int(req.Limit),
+		DirsOnly:   req.DirsOnly,
+		Prefix:     req.Prefix,
+		Limit:      int(req.Limit),
+		CurrentDir: req.CurrentDir,
 	}
 
 	batchSize := 10

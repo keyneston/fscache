@@ -116,25 +116,49 @@ func (s *PebbleList) Fetch(opts ReadOptions) <-chan AddData {
 	go func() {
 		defer close(ch)
 
-		if err := s.copySet(ch, dirPrefix, opts); err != nil {
-			s.logger.WithError(err).Error()
-		}
+		var count int
+		var err error
 
 		if !opts.DirsOnly {
-			if err := s.copySet(ch, filePrefix, opts); err != nil {
+			count, err = s.copySet(ch, filePrefix, opts, count)
+			if err != nil {
 				s.logger.WithError(err).Error()
 			}
+		}
+
+		count, err = s.copySet(ch, dirPrefix, opts, count)
+		if err != nil {
+			s.logger.WithError(err).Error()
 		}
 	}()
 
 	return ch
 }
 
-func (s *PebbleList) copySet(ch chan<- AddData, keyPrefix string, opts ReadOptions) error {
-	iterOpts := &pebble.IterOptions{
-		LowerBound: []byte(fmt.Sprintf("%s%s", keyPrefix, opts.Prefix)),
-		UpperBound: calcUpperBound(fmt.Sprintf("%s%s", keyPrefix, opts.Prefix)),
+func (s *PebbleList) copySet(ch chan<- AddData, keyType string, opts ReadOptions, count int) (int, error) {
+	lowerBound := []byte(fmt.Sprintf("%s%s", keyType, opts.Prefix))
+	middleBound := lowerBound
+	upperBound := calcUpperBound(fmt.Sprintf("%s%s", keyType, opts.Prefix))
+
+	if opts.CurrentDir != "" && opts.CurrentDir != opts.Prefix {
+		middleBound = []byte(fmt.Sprintf("%s%s", keyType, opts.CurrentDir))
 	}
+
+	var err error
+	count, err = s.fetchRange(ch, middleBound, upperBound, opts, count)
+	if err != nil {
+		return count, err
+	}
+
+	return s.fetchRange(ch, lowerBound, middleBound, opts, count)
+}
+
+func (s *PebbleList) fetchRange(ch chan<- AddData, lower, upper []byte, opts ReadOptions, count int) (int, error) {
+	iterOpts := &pebble.IterOptions{
+		LowerBound: lower,
+		UpperBound: upper,
+	}
+
 	s.logger.WithField("iterOpts", logrus.Fields{
 		"LowerBound": string(iterOpts.LowerBound),
 		"UpperBoudn": string(iterOpts.UpperBound),
@@ -143,22 +167,21 @@ func (s *PebbleList) copySet(ch chan<- AddData, keyPrefix string, opts ReadOptio
 	iter := s.db.NewIter(iterOpts)
 	defer iter.Close()
 
-	count := 0
 	for iter.First(); iter.Valid(); iter.Next() {
 		if opts.Limit > 0 && count >= opts.Limit {
-			return nil
+			return count, nil
 		}
 
 		var data AddData
 		if err := json.Unmarshal(iter.Value(), &data); err != nil {
-			return err
+			return count, err
 		}
 
 		ch <- data
 		count++
 	}
 
-	return nil
+	return 0, nil
 }
 
 func (s *PebbleList) Flush() error {
