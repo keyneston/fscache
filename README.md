@@ -5,6 +5,27 @@ needed.
 
 It works, but is rough around the edges.
 
+## Why
+
+CtrlP is amazing for jumping around a repo, but it really struggles with
+listing all the files to fuzzy search from. For a long time I had a bit of
+code in my ctrlp config that essentially boiled down to:
+
+`[ cwd -e $HOME ] && "echo can't run ctrlp from home"`. 
+
+This worked, and prevented me from locking up my VIM every time I had the
+misfortune of invoking it from the home directory. Combine this with `git
+ls-files` and I had a working solution.
+
+That was until I started working in a monorepo with around 50k files. Even
+with `git ls-files` CtrlP was struggling. Enabling caching made it manageable
+but I was constantly struggling with the cache being out of date.
+
+So `fscache` was born. Something that would monitor and maintain a cache. Then
+provide some tools for reading from it and quickly filtering it down to
+relevant data. This made working in the monorepo quick, and allowed me to hop
+around from my home directory.
+
 ## CtrlP & VIM
 
 `fscache` can be used with VIM and CtrlP by using something like the following
