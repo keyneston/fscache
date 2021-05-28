@@ -8,6 +8,7 @@ message ListRequest {
   string prefix = 1;
   int32 limit = 2;
   bool dirsOnly = 3;
+  int32 batchSize = 4;
 }
 
 message File {
@@ -17,7 +18,11 @@ message File {
   int64 updated_at = 3;
 }
 
+message Files {
+  repeated File files = 1;
+}
+
 service FSCache {
-  rpc GetFiles(ListRequest) returns (stream File);
+  rpc GetFiles(ListRequest) returns (stream Files);
   rpc Shutdown(google.protobuf.Empty) returns (google.protobuf.Empty);
 }

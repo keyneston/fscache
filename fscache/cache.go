@@ -189,12 +189,30 @@ func (fs *FSCache) GetFiles(req *proto.ListRequest, srv proto.FSCache_GetFilesSe
 		Limit:    int(req.Limit),
 	}
 
+	batchSize := 10
+	if req.BatchSize != 0 {
+		batchSize = int(req.BatchSize)
+	}
+
+	files := &proto.Files{}
 	for file := range fs.fileList.Fetch(opts) {
 		f := &proto.File{
 			Name: file.Name,
 		}
 
-		if err := srv.Send(f); err != nil {
+		files.Files = append(files.Files, f)
+
+		if len(files.Files) >= batchSize {
+			if err := srv.Send(files); err != nil {
+				return err
+			}
+			files = &proto.Files{}
+		}
+	}
+
+	// Send any remaining data:
+	if len(files.Files) > 0 {
+		if err := srv.Send(files); err != nil {
 			return err
 		}
 	}

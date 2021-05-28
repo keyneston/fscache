@@ -4,7 +4,6 @@ package proto
 
 import (
 	context "context"
-
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
@@ -48,7 +47,7 @@ func (c *fSCacheClient) GetFiles(ctx context.Context, in *ListRequest, opts ...g
 }
 
 type FSCache_GetFilesClient interface {
-	Recv() (*File, error)
+	Recv() (*Files, error)
 	grpc.ClientStream
 }
 
@@ -56,8 +55,8 @@ type fSCacheGetFilesClient struct {
 	grpc.ClientStream
 }
 
-func (x *fSCacheGetFilesClient) Recv() (*File, error) {
-	m := new(File)
+func (x *fSCacheGetFilesClient) Recv() (*Files, error) {
+	m := new(Files)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
@@ -114,7 +113,7 @@ func _FSCache_GetFiles_Handler(srv interface{}, stream grpc.ServerStream) error 
 }
 
 type FSCache_GetFilesServer interface {
-	Send(*File) error
+	Send(*Files) error
 	grpc.ServerStream
 }
 
@@ -122,7 +121,7 @@ type fSCacheGetFilesServer struct {
 	grpc.ServerStream
 }
 
-func (x *fSCacheGetFilesServer) Send(m *File) error {
+func (x *fSCacheGetFilesServer) Send(m *Files) error {
 	return x.ServerStream.SendMsg(m)
 }
 

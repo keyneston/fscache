@@ -21,7 +21,8 @@ type Command struct {
 	mode    string
 	logger  *logrus.Logger
 
-	limit int
+	limit     int
+	batchSize int
 }
 
 func (*Command) Name() string     { return "read" }
@@ -38,6 +39,7 @@ func (c *Command) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&c.prefix, "prefix", "", "Alias for -p")
 	f.StringVar(&c.mode, "mode", "sql", "DB mode; experimental")
 	f.IntVar(&c.limit, "n", 0, "Number of items to return. 0 for all")
+	f.IntVar(&c.batchSize, "b", 1000, "Number of items to return per batch")
 	f.BoolVar(&c.dirOnly, "d", false, "Only return directories")
 }
 
@@ -50,8 +52,9 @@ func (c *Command) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) 
 	}
 
 	stream, err := client.GetFiles(context.Background(), &proto.ListRequest{
-		Prefix: c.prefix,
-		Limit:  int32(c.limit),
+		Prefix:    c.prefix,
+		Limit:     int32(c.limit),
+		BatchSize: int32(c.batchSize),
 	})
 	if err != nil {
 		return shared.Exitf("Error fetching results: %v", err)
@@ -59,7 +62,7 @@ func (c *Command) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) 
 
 	c.logger.Debugf("Got stream")
 	for {
-		file, err := stream.Recv()
+		files, err := stream.Recv()
 		if errors.Is(err, io.EOF) {
 			break
 		}
@@ -67,11 +70,13 @@ func (c *Command) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) 
 			return shared.Exitf("Error fetching all results: %v", err)
 		}
 
-		if file == nil {
+		if files == nil {
 			continue
 		}
-		os.Stdout.WriteString(file.Name)
-		os.Stdout.Write([]byte{'\n'})
+		for _, file := range files.Files {
+			os.Stdout.WriteString(file.Name)
+			os.Stdout.Write([]byte{'\n'})
+		}
 	}
 
 	c.logger.WithError(err).Debugf("Done")
