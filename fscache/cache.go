@@ -20,6 +20,8 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
+var DefaultFlushTime = time.Second * 1
+
 var _ proto.FSCacheServer = &FSCache{}
 
 type FSCache struct {
@@ -80,6 +82,8 @@ func (fs *FSCache) Run() {
 	fs.watcher.Start()
 	fs.init()
 
+	flushTick := time.NewTicker(DefaultFlushTime)
+
 	for {
 		select {
 		case events := <-fs.watcher.Stream():
@@ -89,6 +93,10 @@ func (fs *FSCache) Run() {
 		case <-fs.ctx.Done():
 			fs.logger.WithError(fs.ctx.Err()).Warn("Receive context.Done")
 			return
+		case <-flushTick.C:
+			if err := fs.fileList.Flush(); err != nil {
+				fs.logger.WithError(err).Error("error flushing fslist")
+			}
 		}
 	}
 }
@@ -162,8 +170,13 @@ func (fs *FSCache) init() {
 			return err
 		}
 
+		abs, err := filepath.Abs(path)
+		if err != nil {
+			return err
+		}
+
 		fs.fileList.Add(fslist.AddData{
-			Name:      path,
+			Name:      abs,
 			UpdatedAt: info.ModTime(),
 			IsDir:     d.IsDir(),
 		})
