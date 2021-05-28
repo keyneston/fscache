@@ -15,18 +15,13 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - name: Set up Go
-      uses: actions/setup-go@v2
-      with:
-        go-version: 1.16
-
     - name: Set up Homebrew
       id: set-up-homebrew
       uses: Homebrew/actions/setup-homebrew@master
 
     - name: Install Brews
       run: |
-        brew install protobuf protoc-gen-go protoc-gen-go-grpc fswatch
+        brew install go protobuf protoc-gen-go protoc-gen-go-grpc fswatch
 
     - name: Test
       run: go test -v ./...
