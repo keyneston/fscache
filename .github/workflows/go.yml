@@ -19,9 +19,18 @@ jobs:
       id: set-up-homebrew
       uses: Homebrew/actions/setup-homebrew@master
 
+    - name: Cache homebrew
+      uses: actions/cache@v2
+      with:
+         path: |
+           /usr/local/
+         key: ${{ runner.os }}-${{ hashFiles('**/go.yml') }} # Hash based on this file
+
     - name: Install Brews
       run: |
-        brew install --overwrite go protobuf protoc-gen-go protoc-gen-go-grpc fswatch
+        brew install protobuf protoc-gen-go protoc-gen-go-grpc fswatch
+        brew install go || true
+        brew link --overwrite go
 
     - name: Test
       run: go test -v ./...
