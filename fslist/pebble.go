@@ -32,8 +32,6 @@ func OpenPebble() (FSList, error) {
 	return openPebble()
 }
 
-//TODO: handle closing the DB connection
-
 func openPebble() (FSList, error) {
 	location, err := os.MkdirTemp("", "fscache-pebble-db-*")
 	if err != nil {
@@ -63,6 +61,10 @@ func openPebble() (FSList, error) {
 	}
 
 	return s, nil
+}
+
+func (s *PebbleList) Close() error {
+	return s.db.Close()
 }
 
 func (s *PebbleList) init() error {

@@ -147,6 +147,7 @@ func (fs *FSCache) Close() {
 		fs.logger.Warn("Received stop, shutting down")
 		fs.watcher.Stop()
 		fs.cancel()
+		fs.fileList.Close()
 		go fs.server.GracefulStop()
 	})
 }

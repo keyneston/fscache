@@ -162,3 +162,7 @@ func (s *SQList) Flush() error {
 	// NOOP because SQL doesn't need to flush.
 	return nil
 }
+
+func (s *SQList) Close() error {
+	return s.db.Close()
+}

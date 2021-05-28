@@ -27,12 +27,13 @@ func (a AddData) key() []byte {
 }
 
 type FSList interface {
-	Pending() bool
 	Add(AddData) error
+	Close() error
 	Delete(AddData) error
-	Len() int
 	Fetch(ReadOptions) <-chan AddData
 	Flush() error
+	Len() int
+	Pending() bool
 }
 
 type ReadOptions struct {
