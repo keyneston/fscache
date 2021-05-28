@@ -7,6 +7,7 @@ import (
 )
 
 var debug bool
+var level string
 var logger *logrus.Logger
 
 func Logger() *logrus.Logger {
@@ -14,12 +15,21 @@ func Logger() *logrus.Logger {
 		return logger
 	}
 
+	if debug {
+		level = "debug"
+	}
+
 	logger = logrus.New()
 	logger.SetLevel(logrus.ErrorLevel)
-	if debug {
-		logger.SetLevel(logrus.DebugLevel)
-	}
 	logger.Out = os.Stderr
 	logger.SetFormatter(&logrus.JSONFormatter{PrettyPrint: false})
+
+	parsedLevel, err := logrus.ParseLevel(level)
+	if err != nil {
+		logger.Errorf("Unable to parse level %q; defaulting to %q", level, logrus.ErrorLevel)
+		parsedLevel = logrus.ErrorLevel
+	}
+	logger.SetLevel(parsedLevel)
+
 	return logger
 }

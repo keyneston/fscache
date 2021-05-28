@@ -24,11 +24,13 @@ var DefaultSocketLocation = "${HOME}/.cache/fscache.socket"
 
 func (c *Config) SetFlags(f *flag.FlagSet) {
 	f.BoolVar(&debug, "debug", false, "Enable verbose debug logging")
+	f.StringVar(&level, "log-level", "error", "Log level. Options: panic, fatal, error, warn, info, debug, trace")
 	f.StringVar(&c.PIDFile, "pid", "{home}/.cache/{cache}.pid", "Which PID file to use")
 	f.StringVar(&c.socket, "socket", "", "Where to place the communications socket, defaults to ~/.cache/fscache.socket")
 
 	c.globalOnce.Do(func() {
 		flag.BoolVar(&debug, "debug", false, "Enable verbose debug logging")
+		flag.StringVar(&level, "log-level", "error", "Log level. Options: panic, fatal, error, warn, info, debug, trace")
 		flag.StringVar(&c.PIDFile, "pid", "{home}/.cache/{cache}.pid", "Which PID file to use")
 		flag.StringVar(&c.socket, "socket", "", "Where to place the communications socket, defaults to ~/.cache/fscache.socket")
 	})
