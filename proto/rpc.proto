@@ -10,10 +10,6 @@ message ListRequest {
   bool dirsOnly = 3;
   int32 batchSize = 4;
   string currentDir = 5;
-
-  // ignore is the contents of the local .git_ignore which will be used for
-  // filtering results returned.
-  string ignore = 64;
 }
 
 message File {

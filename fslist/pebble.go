@@ -98,6 +98,18 @@ func (s *PebbleList) Len() int {
 	return 0
 }
 
+func (s *PebbleList) newPebbleFetcher(opts ReadOptions) (*pebbleFetcher, <-chan AddData) {
+	ch := make(chan AddData, 1)
+
+	return &pebbleFetcher{
+		db:     s.db,
+		logger: s.logger.WithField("module", "pebbleFetcher").Logger,
+		ch:     ch,
+		opts:   opts,
+		count:  0,
+	}, ch
+}
+
 // calcUpperBound takes a string and converts its last character to one greater than it is. e.g. prefix => prefiy. That way it can match all all things that being with prefix but nothing else.
 func calcUpperBound(prefix string) []byte {
 	if len(prefix) == 0 {
@@ -111,77 +123,10 @@ func calcUpperBound(prefix string) []byte {
 }
 
 func (s *PebbleList) Fetch(opts ReadOptions) <-chan AddData {
-	ch := make(chan AddData, 1)
-
-	go func() {
-		defer close(ch)
-
-		var count int
-		var err error
-
-		if !opts.DirsOnly {
-			count, err = s.copySet(ch, filePrefix, opts, count)
-			if err != nil {
-				s.logger.WithError(err).Error()
-			}
-		}
-
-		count, err = s.copySet(ch, dirPrefix, opts, count)
-		if err != nil {
-			s.logger.WithError(err).Error()
-		}
-	}()
+	fetcher, ch := s.newPebbleFetcher(opts)
+	go fetcher.Fetch()
 
 	return ch
-}
-
-func (s *PebbleList) copySet(ch chan<- AddData, keyType string, opts ReadOptions, count int) (int, error) {
-	lowerBound := []byte(fmt.Sprintf("%s%s", keyType, opts.Prefix))
-	middleBound := lowerBound
-	upperBound := calcUpperBound(fmt.Sprintf("%s%s", keyType, opts.Prefix))
-
-	if opts.CurrentDir != "" && opts.CurrentDir != opts.Prefix {
-		middleBound = []byte(fmt.Sprintf("%s%s", keyType, opts.CurrentDir))
-	}
-
-	var err error
-	count, err = s.fetchRange(ch, middleBound, upperBound, opts, count)
-	if err != nil {
-		return count, err
-	}
-
-	return s.fetchRange(ch, lowerBound, middleBound, opts, count)
-}
-
-func (s *PebbleList) fetchRange(ch chan<- AddData, lower, upper []byte, opts ReadOptions, count int) (int, error) {
-	iterOpts := &pebble.IterOptions{
-		LowerBound: lower,
-		UpperBound: upper,
-	}
-
-	s.logger.WithField("iterOpts", logrus.Fields{
-		"LowerBound": string(iterOpts.LowerBound),
-		"UpperBoudn": string(iterOpts.UpperBound),
-	}).Debug("Iterating")
-
-	iter := s.db.NewIter(iterOpts)
-	defer iter.Close()
-
-	for iter.First(); iter.Valid(); iter.Next() {
-		if opts.Limit > 0 && count >= opts.Limit {
-			return count, nil
-		}
-
-		var data AddData
-		if err := json.Unmarshal(iter.Value(), &data); err != nil {
-			return count, err
-		}
-
-		ch <- data
-		count++
-	}
-
-	return 0, nil
 }
 
 func (s *PebbleList) Flush() error {

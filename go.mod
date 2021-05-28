@@ -8,6 +8,7 @@ require (
 	github.com/fsnotify/fsevents v0.1.1
 	github.com/google/subcommands v1.2.0
 	github.com/mattn/go-sqlite3 v1.14.7
+	github.com/monochromegane/go-gitignore v0.0.0-20200626010858-205db1a8cc00 // indirect
 	github.com/nightlyone/lockfile v1.0.0
 	github.com/sirupsen/logrus v1.8.1
 	github.com/slongfield/pyfmt v0.0.0-20180124071345-020a7cb18bca
