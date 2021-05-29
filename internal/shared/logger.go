@@ -9,6 +9,7 @@ import (
 var debug bool
 var level string = "error"
 var logger *logrus.Logger
+var pretty bool
 
 func Logger() *logrus.Logger {
 	if logger != nil {
@@ -22,7 +23,7 @@ func Logger() *logrus.Logger {
 	logger = logrus.New()
 	logger.SetLevel(logrus.ErrorLevel)
 	logger.Out = os.Stderr
-	logger.SetFormatter(&logrus.JSONFormatter{PrettyPrint: false})
+	logger.SetFormatter(&logrus.JSONFormatter{PrettyPrint: pretty})
 
 	parsedLevel, err := logrus.ParseLevel(level)
 	if err != nil {
@@ -36,5 +37,14 @@ func Logger() *logrus.Logger {
 
 func SetLevel(lvl logrus.Level) {
 	level = lvl.String()
-	logger.SetLevel(lvl)
+	if logger != nil {
+		logger.SetLevel(lvl)
+	}
+}
+
+func SetPrettyLogging() {
+	pretty = true
+	if logger != nil {
+		logger.SetFormatter(&logrus.JSONFormatter{PrettyPrint: true})
+	}
 }

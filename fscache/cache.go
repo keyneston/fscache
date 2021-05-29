@@ -153,18 +153,18 @@ func checkSkipPath(ignore gitignore.IgnoreMatcher, path string, dir bool) bool {
 
 func (fs *FSCache) handleEvent(e watcher.Event) {
 	if checkSkipPath(fs.ignore, e.Path, e.Dir) {
-		fs.logger.Debugf("Skipping %q", e.Path)
+		fs.logger.Debugf("Skipping %#q", e.Path)
 		return
 	}
 
 	switch e.Type {
 	case watcher.EventTypeDelete:
-		fs.logger.Tracef("Removing %q", e.Path)
+		fs.logger.Tracef("Removing %#q", e.Path)
 		if err := fs.fileList.Delete(eventToAddData(e)); err != nil {
 			fs.logger.Errorf("Error deleting file: %v", err)
 		}
 	case watcher.EventTypeAdd:
-		fs.logger.Tracef("Adding %q", e.Path)
+		fs.logger.Tracef("Adding %#q", e.Path)
 		if err := fs.fileList.Add(eventToAddData(e)); err != nil {
 			fs.logger.Errorf("Error adding file: %v", err)
 		}
@@ -242,6 +242,7 @@ func (fs *FSCache) GetFiles(req *proto.ListRequest, srv proto.FSCache_GetFilesSe
 	for file := range fs.fileList.Fetch(opts) {
 		f := &proto.File{
 			Name: file.Name,
+			Dir:  file.IsDir,
 		}
 
 		files.Files = append(files.Files, f)

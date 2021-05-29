@@ -82,6 +82,7 @@ func (pf *pebbleFetcher) fetchRange(lower, upper []byte) (int, error) {
 
 		ignore := pf.ignoreCache.Get(data.Name)
 		if ignore != nil && ignore.Match(data.Name, data.IsDir) {
+			pf.logger.WithField("file", data.Name).Tracef("Skipping")
 			iter.SeekGE(calcUpperBound(string(data.Name)))
 			continue
 		}

@@ -4,12 +4,21 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/keyneston/fscache/proto"
 )
 
 type AddData struct {
 	Name      string
 	UpdatedAt time.Time
 	IsDir     bool
+}
+
+func AddDataFromProtoFile(f *proto.File) AddData {
+	return AddData{
+		Name:  f.Name,
+		IsDir: f.Dir,
+	}
 }
 
 func (a AddData) String() string {
@@ -19,6 +28,13 @@ func (a AddData) String() string {
 	}
 
 	return fmt.Sprintf("AddData{%s%s}", a.Name, dirStr)
+}
+
+func (a AddData) ToProtoFile() *proto.File {
+	return &proto.File{
+		Dir:  a.IsDir,
+		Name: a.Name,
+	}
 }
 
 type ByPath []AddData

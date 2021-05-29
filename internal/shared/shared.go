@@ -15,7 +15,7 @@ import (
 type Config struct {
 	PIDFile string
 
-	socket string
+	Socket string
 
 	globalOnce sync.Once
 }
@@ -23,16 +23,18 @@ type Config struct {
 var DefaultSocketLocation = "${HOME}/.cache/fscache.socket"
 
 func (c *Config) SetFlags(f *flag.FlagSet) {
-	f.BoolVar(&debug, "debug", false, "Enable verbose debug logging")
-	f.StringVar(&level, "log-level", "error", "Log level. Options: panic, fatal, error, warn, info, debug, trace")
-	f.StringVar(&c.PIDFile, "pid", "{home}/.cache/{cache}.pid", "Which PID file to use")
-	f.StringVar(&c.socket, "socket", "", "Where to place the communications socket, defaults to ~/.cache/fscache.socket")
+	if f != nil {
+		f.BoolVar(&debug, "debug", false, "Enable verbose debug logging")
+		f.StringVar(&level, "log-level", "error", "Log level. Options: panic, fatal, error, warn, info, debug, trace")
+		f.StringVar(&c.PIDFile, "pid", "{home}/.cache/{cache}.pid", "Which PID file to use")
+		f.StringVar(&c.Socket, "socket", "", "Where to place the communications socket, defaults to ~/.cache/fscache.socket")
+	}
 
 	c.globalOnce.Do(func() {
 		flag.BoolVar(&debug, "debug", false, "Enable verbose debug logging")
 		flag.StringVar(&level, "log-level", "error", "Log level. Options: panic, fatal, error, warn, info, debug, trace")
 		flag.StringVar(&c.PIDFile, "pid", "{home}/.cache/{cache}.pid", "Which PID file to use")
-		flag.StringVar(&c.socket, "socket", "", "Where to place the communications socket, defaults to ~/.cache/fscache.socket")
+		flag.StringVar(&c.Socket, "socket", "", "Where to place the communications socket, defaults to ~/.cache/fscache.socket")
 	})
 }
 
@@ -40,7 +42,7 @@ func (c *Config) RegisterGlobal() {
 	// In order to keep all flag declarations in one place they are wrapped up
 	// in the SetFlags function. IN order to register them globally we just
 	// cheat and set a non-existent flag set.
-	c.SetFlags(flag.NewFlagSet("", flag.ContinueOnError))
+	c.SetFlags(nil)
 }
 
 func (c *Config) Client() (proto.FSCacheClient, error) {
@@ -57,8 +59,8 @@ func (c *Config) Client() (proto.FSCacheClient, error) {
 }
 
 func (c *Config) SocketLocation() (string, error) {
-	if c.socket != "" {
-		return c.socket, nil
+	if c.Socket != "" {
+		return c.Socket, nil
 	}
 
 	home, err := os.UserHomeDir()
