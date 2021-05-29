@@ -7,7 +7,7 @@ import (
 )
 
 var debug bool
-var level string
+var level string = "error"
 var logger *logrus.Logger
 
 func Logger() *logrus.Logger {
@@ -32,4 +32,9 @@ func Logger() *logrus.Logger {
 	logger.SetLevel(parsedLevel)
 
 	return logger
+}
+
+func SetLevel(lvl logrus.Level) {
+	level = lvl.String()
+	logger.SetLevel(lvl)
 }

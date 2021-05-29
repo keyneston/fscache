@@ -64,7 +64,7 @@ func TestIgnoreCache_findSuperior(t *testing.T) {
 		ic := buildFakeIC(c.levels...)
 
 		res := ic.findSuperior(c.input)
-		assert.ElementsMatch(t, c.expected, res)
+		assert.Equal(t, c.expected, res)
 	}
 }
 

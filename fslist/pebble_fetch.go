@@ -19,12 +19,31 @@ type pebbleFetcher struct {
 func (pf *pebbleFetcher) Fetch() (int, error) {
 	defer close(pf.ch)
 
-	lowerBound := []byte(pf.opts.Prefix)
-	middleBound := lowerBound
-	upperBound := calcUpperBound(pf.opts.Prefix)
+	if pf.opts.Prefix != "" {
+		return pf.fetchRangeWithPrefix()
+	}
 
-	if pf.opts.CurrentDir != "" && pf.opts.CurrentDir != pf.opts.Prefix {
-		middleBound = []byte(pf.opts.CurrentDir)
+	return pf.fetchRange(nil, nil)
+}
+
+// fetchRangeWithPrefix calculates and executes the fetches necessary if we
+// have a prefix. Ideally we will return items closest to the current working
+// directory first, then return everything else.
+//
+// This is done by splitting the range into two sections:
+// 1. current working directory => end of actual range
+// 2. start of actual range => current working directory
+func (pf *pebbleFetcher) fetchRangeWithPrefix() (int, error) {
+	var lowerBound, middleBound, upperBound []byte
+
+	if pf.opts.Prefix != "" {
+		lowerBound = []byte(pf.opts.Prefix)
+		middleBound = lowerBound
+		upperBound = calcUpperBound(pf.opts.Prefix)
+
+		if pf.opts.CurrentDir != "" && pf.opts.CurrentDir != pf.opts.Prefix {
+			middleBound = []byte(pf.opts.CurrentDir)
+		}
 	}
 
 	var err error
@@ -34,18 +53,19 @@ func (pf *pebbleFetcher) Fetch() (int, error) {
 	}
 
 	return pf.fetchRange(lowerBound, middleBound)
+
 }
 
+// fetchRange does the heavy lifting of actually iterating from lower to upper
+// and sending them onto the channel.
 func (pf *pebbleFetcher) fetchRange(lower, upper []byte) (int, error) {
-	iterOpts := &pebble.IterOptions{
-		LowerBound: lower,
-		UpperBound: upper,
+	var iterOpts *pebble.IterOptions
+	if len(lower) > 0 || len(upper) > 0 {
+		iterOpts = &pebble.IterOptions{
+			LowerBound: lower,
+			UpperBound: upper,
+		}
 	}
-
-	pf.logger.WithField("iterOpts", logrus.Fields{
-		"LowerBound": string(iterOpts.LowerBound),
-		"UpperBoudn": string(iterOpts.UpperBound),
-	}).Debug("Iterating")
 
 	iter := pf.db.NewIter(iterOpts)
 	defer iter.Close()
@@ -75,4 +95,16 @@ func (pf *pebbleFetcher) fetchRange(lower, upper []byte) (int, error) {
 	}
 
 	return 0, nil
+}
+
+// calcUpperBound takes a string and converts its last character to one greater than it is. e.g. prefix => prefiy. That way it can match all all things that being with prefix but nothing else.
+func calcUpperBound(prefix string) []byte {
+	if len(prefix) == 0 {
+		return []byte{}
+	}
+
+	p := []byte(prefix)
+
+	p[len(p)-1] = p[len(p)-1] + 1
+	return p
 }

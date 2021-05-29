@@ -6,6 +6,7 @@ require (
 	github.com/Masterminds/squirrel v1.5.0
 	github.com/cockroachdb/pebble v0.0.0-20210526183633-dd2a545f5d75 // indirect
 	github.com/fsnotify/fsevents v0.1.1
+	github.com/go-test/deep v1.0.7 // indirect
 	github.com/google/subcommands v1.2.0
 	github.com/mattn/go-sqlite3 v1.14.7
 	github.com/monochromegane/go-gitignore v0.0.0-20200626010858-205db1a8cc00 // indirect

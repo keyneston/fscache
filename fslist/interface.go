@@ -2,14 +2,7 @@ package fslist
 
 import (
 	"fmt"
-	"time"
 )
-
-type AddData struct {
-	Name      string
-	UpdatedAt time.Time
-	IsDir     bool
-}
 
 type FSList interface {
 	Add(AddData) error

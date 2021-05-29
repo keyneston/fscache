@@ -123,18 +123,6 @@ func (s *PebbleList) newPebbleFetcher(opts ReadOptions) (*pebbleFetcher, <-chan 
 	}, ch
 }
 
-// calcUpperBound takes a string and converts its last character to one greater than it is. e.g. prefix => prefiy. That way it can match all all things that being with prefix but nothing else.
-func calcUpperBound(prefix string) []byte {
-	if len(prefix) == 0 {
-		return []byte{}
-	}
-
-	p := []byte(prefix)
-
-	p[len(p)-1] = p[len(p)-1] + 1
-	return p
-}
-
 func (s *PebbleList) Fetch(opts ReadOptions) <-chan AddData {
 	fetcher, ch := s.newPebbleFetcher(opts)
 	go fetcher.Fetch()
