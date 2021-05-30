@@ -29,6 +29,7 @@ type integration struct {
 	name      string
 	testDir   string
 	socketLoc string
+	tmp       string
 }
 
 func New(t *testing.T, name string) *integration {
@@ -38,8 +39,15 @@ func New(t *testing.T, name string) *integration {
 	tmp, err := os.MkdirTemp("", fmt.Sprintf("%s-*", name))
 	require.NoError(err, "Error creating workdir")
 
+	tmp, err = filepath.Abs(tmp)
+	require.NoError(err, "Error getting absolute path for workdir")
+
+	tmp, err = filepath.EvalSymlinks(tmp)
+	require.NoError(err, "Error following symlinks path for workdir")
+
 	socketLoc := filepath.Join(tmp, "socket")
 	testDir := filepath.Join(tmp, "test")
+
 	cache, err := fscache.New(
 		socketLoc,
 		testDir,
@@ -52,6 +60,7 @@ func New(t *testing.T, name string) *integration {
 
 	return &integration{
 		t:         t,
+		tmp:       tmp,
 		name:      name,
 		require:   require,
 		assert:    assert,
@@ -60,6 +69,12 @@ func New(t *testing.T, name string) *integration {
 		socketLoc: socketLoc,
 		client:    client,
 	}
+}
+
+func (i *integration) CleanUp() {
+	i.cache.Close()
+	err := os.RemoveAll(i.tmp)
+	i.require.NoError(err, "integration.CleanUp")
 }
 
 func (i *integration) createFile(pathSegments ...string) createFile {

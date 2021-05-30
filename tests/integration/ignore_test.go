@@ -16,7 +16,7 @@ func TestIgnoreEndToEnd(t *testing.T) {
 	i := New(t, "integration-ignore")
 
 	go i.cache.Run()
-	defer i.cache.Close()
+	defer i.CleanUp()
 
 	i.createFile(".gitignore").with("*.ignored").done()
 	i.createFile("foo.ignored").done()
