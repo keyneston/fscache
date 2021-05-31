@@ -19,10 +19,12 @@ type Command struct {
 	*shared.Config
 	logger *logrus.Logger
 
-	dirsOnly bool
-	prefix   string
-	mode     string
-	root     bool
+	dirsOnly  bool
+	filesOnly bool
+
+	prefix string
+	mode   string
+	root   bool
 
 	limit     int
 	batchSize int
@@ -45,6 +47,7 @@ func (c *Command) SetFlags(f *flag.FlagSet) {
 	f.IntVar(&c.limit, "n", 0, "Number of items to return. 0 for all")
 	f.IntVar(&c.batchSize, "b", 1000, "Number of items to return per batch")
 	f.BoolVar(&c.dirsOnly, "d", false, "Only return directories")
+	f.BoolVar(&c.filesOnly, "f", false, "Only return files")
 }
 
 func (c *Command) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
@@ -71,10 +74,15 @@ func (c *Command) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) 
 
 	c.prefix = cleanPrefix(c.prefix)
 
+	if c.filesOnly && c.dirsOnly {
+		return shared.Exitf("-d xor -f; can't give both")
+	}
+
 	stream, err := client.GetFiles(context.Background(), &proto.ListRequest{
 		Prefix:     c.prefix,
 		Limit:      int32(c.limit),
 		BatchSize:  int32(c.batchSize),
+		FilesOnly:  c.filesOnly,
 		DirsOnly:   c.dirsOnly,
 		CurrentDir: cleanPrefix(cwd),
 	})

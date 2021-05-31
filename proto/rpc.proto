@@ -10,6 +10,7 @@ message ListRequest {
   bool dirsOnly = 3;
   int32 batchSize = 4;
   string currentDir = 5;
+  bool filesOnly = 6;
 }
 
 message File {

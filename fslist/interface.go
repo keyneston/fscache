@@ -17,6 +17,7 @@ type FSList interface {
 type ReadOptions struct {
 	Limit      int
 	DirsOnly   bool
+	FilesOnly  bool
 	Prefix     string
 	CurrentDir string
 }

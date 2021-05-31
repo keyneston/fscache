@@ -114,6 +114,9 @@ func (pf *pebbleFetcher) fetchRange(lower, upper []byte) (int, error) {
 		if pf.opts.DirsOnly && !data.IsDir {
 			pf.logger.WithField("file", data.Name).Tracef("Skipping non-dir")
 			continue
+		} else if pf.opts.FilesOnly && data.IsDir {
+			pf.logger.WithField("file", data.Name).Tracef("Skipping non-file")
+			continue
 		}
 
 		pf.ch <- data

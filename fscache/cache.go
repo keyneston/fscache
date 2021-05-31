@@ -222,6 +222,7 @@ func (fs *FSCache) GetFiles(req *proto.ListRequest, srv proto.FSCache_GetFilesSe
 
 	opts := fslist.ReadOptions{
 		DirsOnly:   req.DirsOnly,
+		FilesOnly:  req.FilesOnly,
 		Prefix:     req.Prefix,
 		Limit:      int(req.Limit),
 		CurrentDir: req.CurrentDir,
