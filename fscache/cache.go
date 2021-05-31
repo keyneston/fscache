@@ -116,6 +116,10 @@ func (fs *FSCache) Run() {
 	}
 }
 
+func (fs *FSCache) Flush() error {
+	return fs.fileList.Flush()
+}
+
 func (fs *FSCache) setSignalHandlers() {
 	ch := make(chan os.Signal, 1)
 
@@ -205,22 +209,12 @@ func (fs *FSCache) init() {
 			return err
 		}
 
-		fs.fileList.Add(fslist.AddData{
+		return fs.fileList.Add(fslist.AddData{
 			Name:      abs,
 			UpdatedAt: info.ModTime(),
 			IsDir:     d.IsDir(),
 		})
-		return nil
 	})
-}
-
-func skipFile(path string) bool {
-	switch filepath.Base(path) {
-	case ".git", ".svn":
-		return true
-	default:
-		return false
-	}
 }
 
 func (fs *FSCache) GetFiles(req *proto.ListRequest, srv proto.FSCache_GetFilesServer) error {

@@ -2,3 +2,4 @@ fscachemonitor
 test.cache
 *.sqlite
 dist
+.test.socket

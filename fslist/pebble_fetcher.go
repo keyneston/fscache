@@ -67,6 +67,11 @@ func (pf *pebbleFetcher) fetchRange(lower, upper []byte) (int, error) {
 		}
 	}
 
+	pf.logger.WithField("bounds", logrus.Fields{
+		"lower": lower,
+		"upper": upper,
+	}).WithField("module", "pebbleFetcher").Debug("Doing a fetchRange")
+
 	iter := pf.db.NewIter(iterOpts)
 	defer iter.Close()
 
@@ -79,15 +84,35 @@ func (pf *pebbleFetcher) fetchRange(lower, upper []byte) (int, error) {
 		if err := json.Unmarshal(iter.Value(), &data); err != nil {
 			return pf.count, err
 		}
+		pf.logger.WithField("file", data.Name).Tracef("Checking")
 
 		ignore := pf.ignoreCache.Get(data.Name)
 		if ignore != nil && ignore.Match(data.Name, data.IsDir) {
 			pf.logger.WithField("file", data.Name).Tracef("Skipping")
-			iter.SeekGE(calcUpperBound(string(data.Name)))
+
+			// This requires that the final character be a '/' otherwise the
+			// skip will skip adjacent files:
+			//
+			// Without trailing /
+			//
+			// * file <- ignore this
+			// * file.foo <- don't want to skip this
+			// * file/foo <- want to ignore this
+			//
+			// With trailing /
+			//
+			// * file.foo <- don't want to skip this
+			// * file/ <- ignore this
+			// * file/foo <- want to ignore this
+			//
+			if data.IsDir {
+				iter.SeekGE(calcUpperBound(string(data.Name)))
+			}
 			continue
 		}
 
 		if pf.opts.DirsOnly && !data.IsDir {
+			pf.logger.WithField("file", data.Name).Tracef("Skipping non-dir")
 			continue
 		}
 

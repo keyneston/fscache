@@ -86,13 +86,12 @@ func (s *PebbleList) Add(data AddData) error {
 		return err
 	}
 
-	name := []byte(data.Name)
-	if err := s.db.Set(name, encoded, pebble.NoSync); err != nil {
+	if err := s.db.Set(data.pebbleKey(), encoded, pebble.NoSync); err != nil {
 		return err
 	}
 
 	if filepath.Base(data.Name) == ".gitignore" {
-		if err := s.ignoreCache.Add(data.Name); err != nil {
+		if err := s.ignoreCache.Add(string(data.pebbleKey())); err != nil {
 			return err
 		}
 	}
@@ -102,7 +101,7 @@ func (s *PebbleList) Add(data AddData) error {
 
 func (s *PebbleList) Delete(data AddData) error {
 	s.logger.WithField("data", data).Tracef("Deleting")
-	return s.db.Delete([]byte(data.Name), pebble.NoSync)
+	return s.db.Delete(data.pebbleKey(), pebble.NoSync)
 }
 
 func (s *PebbleList) Len() int {

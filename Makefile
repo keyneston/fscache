@@ -1,3 +1,4 @@
+SOCKET=-socket ./.test.socket
 .PHONY: build
 build: test
 	go build ./
@@ -16,11 +17,11 @@ install:
 
 .PHONY: run
 run:
-	go run ./ run -mode pebble -debug
+	go run ./ run -mode pebble -debug ${SOCKET} -r .
 
 .PHONY: read
 read:
-	go run ./ read -debug
+	go run ./ read -debug ${SOCKET}
 
 .PHONY: generate
 generate:

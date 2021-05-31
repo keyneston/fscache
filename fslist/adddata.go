@@ -37,6 +37,19 @@ func (a AddData) ToProtoFile() *proto.File {
 	}
 }
 
+func (a AddData) pebbleKey() []byte {
+	if len(a.Name) == 0 {
+		return []byte{}
+	}
+
+	key := []byte(a.Name)
+	if a.IsDir && key[len(key)-1] != '/' {
+		key = append(key, '/')
+	}
+
+	return key
+}
+
 type ByPath []AddData
 
 func (s ByPath) Len() int {
