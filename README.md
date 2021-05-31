@@ -1,7 +1,8 @@
 # FS Cache
 
-A helper program for managing and monitoring a cache file and updating it as
-needed.
+`fscache` monitors files on your computer and allows you to quickly gather
+lists of them. Combined with `fzf` or `ctrlp` to get amazing mobility of your
+computer.
 
 It works, but is rough around the edges.
 
@@ -25,6 +26,46 @@ So `fscache` was born. Something that would monitor and maintain a cache. Then
 provide some tools for reading from it and quickly filtering it down to
 relevant data. This made working in the monorepo quick, and allowed me to hop
 around from my home directory.
+
+# Subcommands
+
+## global flags
+
+| flag       | default                 | description                   |
+| ---------- | ----------------------- | ----------------------------- |
+| -debug     | false                   | Enable debug logging          |
+| -log-level | "error"                 | Set the log level             |
+| -socket    | ~/.cache/fscache.socket | Communication socket location |
+
+## run
+
+Run starts the fscache server.
+
+| flag       | default | description                    |
+| ---------- | ------- | ------------------------------ |
+| -r / -root | ~/      | Where to start monitoring from |
+| mode       | pebble  | Which backend database to use  |
+ 
+## read
+
+Read fetches data from the server for use with another tool.
+
+| flag         | default | description                           |
+| ------------ | ------- | ------------------------------------- |
+| -p / -prefix | ""      | Limit returned items to subpath       |
+| -r           | false   | Auto discover git root and set prefix |
+| -n           | all     | Number of items to return. 0 for all  |
+| -b           | 1000    | Number of items to return per batch   |
+| -d           | false   | Only return directories               |
+| -f           | false   | Only return files                     |
+
+## stop
+
+Stop either shuts the server down or restarts it.
+
+| flag          | default | description                 |
+| ------------- | ------- | --------------------------- |
+| -r / -restart | false   | restart instead of stopping |
 
 # Integrations
 

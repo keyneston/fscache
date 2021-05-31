@@ -43,7 +43,6 @@ func (c *Command) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&c.prefix, "p", "", "Prefix to limit paths returned")
 	f.BoolVar(&c.root, "r", false, "Auto discover root")
 	f.StringVar(&c.prefix, "prefix", "", "Alias for -p")
-	f.StringVar(&c.mode, "mode", "sql", "DB mode; experimental")
 	f.IntVar(&c.limit, "n", 0, "Number of items to return. 0 for all")
 	f.IntVar(&c.batchSize, "b", 1000, "Number of items to return per batch")
 	f.BoolVar(&c.dirsOnly, "d", false, "Only return directories")
