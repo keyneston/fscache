@@ -23,6 +23,14 @@ run:
 read:
 	go run ./ read -debug ${SOCKET}
 
+.PHONY: restart
+restart:
+	go run ./ stop -r ${SOCKET}
+
+.PHONY: stop 
+stop:
+	go run ./ stop ${SOCKET}
+
 .PHONY: generate
 generate:
 	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative proto/rpc.proto

@@ -6,13 +6,15 @@ import (
 
 	"github.com/google/subcommands"
 	"github.com/keyneston/fscache/internal/shared"
+	"github.com/keyneston/fscache/proto"
 	"github.com/sirupsen/logrus"
-	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 type Command struct {
 	*shared.Config
 	logger *logrus.Logger
+
+	restart bool
 }
 
 func (*Command) Name() string     { return "stop" }
@@ -24,6 +26,8 @@ func (*Command) Usage() string {
 
 func (c *Command) SetFlags(f *flag.FlagSet) {
 	c.Config.SetFlags(f)
+	f.BoolVar(&c.restart, "r", false, "restart")
+	f.BoolVar(&c.restart, "restart", false, "restart")
 }
 
 func (c *Command) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
@@ -34,7 +38,7 @@ func (c *Command) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) 
 		return shared.Exitf("Error connecting to fscache: %v", err)
 	}
 
-	if _, err := client.Shutdown(context.Background(), &emptypb.Empty{}); err != nil {
+	if _, err := client.Shutdown(context.Background(), &proto.ShutdownRequest{Restart: c.restart}); err != nil {
 		return shared.Exitf("Error shutting down: %v", err)
 	}
 

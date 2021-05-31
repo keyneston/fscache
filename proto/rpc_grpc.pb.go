@@ -20,8 +20,7 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type FSCacheClient interface {
 	GetFiles(ctx context.Context, in *ListRequest, opts ...grpc.CallOption) (FSCache_GetFilesClient, error)
-	Shutdown(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	Restart(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	Shutdown(ctx context.Context, in *ShutdownRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
 type fSCacheClient struct {
@@ -64,18 +63,9 @@ func (x *fSCacheGetFilesClient) Recv() (*Files, error) {
 	return m, nil
 }
 
-func (c *fSCacheClient) Shutdown(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+func (c *fSCacheClient) Shutdown(ctx context.Context, in *ShutdownRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	out := new(emptypb.Empty)
 	err := c.cc.Invoke(ctx, "/FSCache/Shutdown", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *fSCacheClient) Restart(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error) {
-	out := new(emptypb.Empty)
-	err := c.cc.Invoke(ctx, "/FSCache/Restart", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -87,8 +77,7 @@ func (c *fSCacheClient) Restart(ctx context.Context, in *emptypb.Empty, opts ...
 // for forward compatibility
 type FSCacheServer interface {
 	GetFiles(*ListRequest, FSCache_GetFilesServer) error
-	Shutdown(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
-	Restart(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
+	Shutdown(context.Context, *ShutdownRequest) (*emptypb.Empty, error)
 	mustEmbedUnimplementedFSCacheServer()
 }
 
@@ -99,11 +88,8 @@ type UnimplementedFSCacheServer struct {
 func (UnimplementedFSCacheServer) GetFiles(*ListRequest, FSCache_GetFilesServer) error {
 	return status.Errorf(codes.Unimplemented, "method GetFiles not implemented")
 }
-func (UnimplementedFSCacheServer) Shutdown(context.Context, *emptypb.Empty) (*emptypb.Empty, error) {
+func (UnimplementedFSCacheServer) Shutdown(context.Context, *ShutdownRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Shutdown not implemented")
-}
-func (UnimplementedFSCacheServer) Restart(context.Context, *emptypb.Empty) (*emptypb.Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Restart not implemented")
 }
 func (UnimplementedFSCacheServer) mustEmbedUnimplementedFSCacheServer() {}
 
@@ -140,7 +126,7 @@ func (x *fSCacheGetFilesServer) Send(m *Files) error {
 }
 
 func _FSCache_Shutdown_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(emptypb.Empty)
+	in := new(ShutdownRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -152,25 +138,7 @@ func _FSCache_Shutdown_Handler(srv interface{}, ctx context.Context, dec func(in
 		FullMethod: "/FSCache/Shutdown",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(FSCacheServer).Shutdown(ctx, req.(*emptypb.Empty))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _FSCache_Restart_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(emptypb.Empty)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(FSCacheServer).Restart(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/FSCache/Restart",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(FSCacheServer).Restart(ctx, req.(*emptypb.Empty))
+		return srv.(FSCacheServer).Shutdown(ctx, req.(*ShutdownRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -185,10 +153,6 @@ var FSCache_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Shutdown",
 			Handler:    _FSCache_Shutdown_Handler,
-		},
-		{
-			MethodName: "Restart",
-			Handler:    _FSCache_Restart_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

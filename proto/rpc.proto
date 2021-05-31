@@ -24,8 +24,11 @@ message Files {
   repeated File files = 1;
 }
 
+message ShutdownRequest {
+  bool restart = 1;
+}
+
 service FSCache {
   rpc GetFiles(ListRequest) returns (stream Files);
-  rpc Shutdown(google.protobuf.Empty) returns (google.protobuf.Empty);
-  rpc Restart(google.protobuf.Empty) returns (google.protobuf.Empty);
+  rpc Shutdown(ShutdownRequest) returns (google.protobuf.Empty);
 }

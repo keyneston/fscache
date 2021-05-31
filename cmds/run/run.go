@@ -4,7 +4,9 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"log"
 	"os"
+	"syscall"
 
 	"github.com/google/subcommands"
 	"github.com/keyneston/fscache/fscache"
@@ -73,7 +75,12 @@ func (c *Command) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) 
 		return shared.Exitf("Error starting monitor: %v", err)
 	}
 
-	fs.Run()
+	if restart := fs.Run(); restart {
+		log.Printf("About to exec: %q %v", os.Args[0], os.Args[1:])
+		if err := syscall.Exec(os.Args[0], os.Args, os.Environ()); err != nil {
+			return shared.Exitf("Error restarting: %v", err)
+		}
+	}
 
 	return subcommands.ExitSuccess
 }

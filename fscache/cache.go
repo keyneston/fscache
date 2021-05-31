@@ -48,9 +48,10 @@ type FSCache struct {
 	server   *grpc.Server
 	ignore   gitignore.IgnoreMatcher
 
-	ctx       context.Context
-	cancel    context.CancelFunc
-	closeOnce *sync.Once
+	ctx           context.Context
+	cancel        context.CancelFunc
+	closeOnce     *sync.Once
+	signalRestart bool
 
 	logger *logrus.Logger
 }
@@ -90,7 +91,9 @@ func New(socketLocation, root string, mode fslist.Mode) (*FSCache, error) {
 	return fs, nil
 }
 
-func (fs *FSCache) Run() {
+// Run runs the main loop. It returns true if the server should restart instead
+// of shutting down.
+func (fs *FSCache) Run() bool {
 	go fs.server.Serve(fs.socket)
 
 	fs.setSignalHandlers()
@@ -107,13 +110,15 @@ func (fs *FSCache) Run() {
 			}
 		case <-fs.ctx.Done():
 			fs.logger.WithError(fs.ctx.Err()).Warn("Receive context.Done")
-			return
+			return fs.signalRestart
 		case <-flushTick.C:
 			if err := fs.fileList.Flush(); err != nil {
 				fs.logger.WithError(err).Error("error flushing fslist")
 			}
 		}
 	}
+
+	return fs.signalRestart
 }
 
 func (fs *FSCache) Flush() error {
@@ -282,13 +287,11 @@ func (fs *FSCache) GetFiles(req *proto.ListRequest, srv proto.FSCache_GetFilesSe
 	return nil
 }
 
-func (fs *FSCache) Shutdown(ctx context.Context, req *emptypb.Empty) (*emptypb.Empty, error) {
-	fs.Close()
-	return req, nil
-}
+func (fs *FSCache) Shutdown(ctx context.Context, req *proto.ShutdownRequest) (*emptypb.Empty, error) {
+	if req != nil && req.Restart {
+		fs.signalRestart = true
+	}
 
-func (fs *FSCache) Restart(ctx context.Context, req *emptypb.Empty) (*emptypb.Empty, error) {
 	fs.Close()
-	// TODO: how to know what flags to send to syscall.Exec?
-	return req, nil
+	return nil, nil
 }
