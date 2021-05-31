@@ -27,4 +27,5 @@ message Files {
 service FSCache {
   rpc GetFiles(ListRequest) returns (stream Files);
   rpc Shutdown(google.protobuf.Empty) returns (google.protobuf.Empty);
+  rpc Restart(google.protobuf.Empty) returns (google.protobuf.Empty);
 }

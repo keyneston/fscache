@@ -286,3 +286,9 @@ func (fs *FSCache) Shutdown(ctx context.Context, req *emptypb.Empty) (*emptypb.E
 	fs.Close()
 	return req, nil
 }
+
+func (fs *FSCache) Restart(ctx context.Context, req *emptypb.Empty) (*emptypb.Empty, error) {
+	fs.Close()
+	// TODO: how to know what flags to send to syscall.Exec?
+	return req, nil
+}
