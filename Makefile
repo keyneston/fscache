@@ -17,7 +17,7 @@ install:
 
 .PHONY: run
 run:
-	go run ./ run -mode pebble -debug ${SOCKET} -r .
+	go run ./ run -mode pebble -log-level trace ${SOCKET} -r .
 
 .PHONY: read
 read:

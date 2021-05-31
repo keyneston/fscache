@@ -131,10 +131,12 @@ func (fs *FSCache) setSignalHandlers() {
 }
 
 func eventToAddData(e watcher.Event) fslist.AddData {
+	updatedAt := time.Now()
+
 	return fslist.AddData{
 		Name:      e.Path,
 		IsDir:     e.Dir,
-		UpdatedAt: time.Now(),
+		UpdatedAt: &updatedAt,
 	}
 }
 
@@ -163,12 +165,12 @@ func (fs *FSCache) handleEvent(e watcher.Event) {
 
 	switch e.Type {
 	case watcher.EventTypeDelete:
-		fs.logger.Tracef("Removing %#q", e.Path)
+		fs.logger.WithField("path", e.Path).Trace("removing")
 		if err := fs.fileList.Delete(eventToAddData(e)); err != nil {
 			fs.logger.Errorf("Error deleting file: %v", err)
 		}
 	case watcher.EventTypeAdd:
-		fs.logger.Tracef("Adding %#q", e.Path)
+		fs.logger.WithField("path", e.Path).Trace("adding")
 		if err := fs.fileList.Add(eventToAddData(e)); err != nil {
 			fs.logger.Errorf("Error adding file: %v", err)
 		}
@@ -187,33 +189,53 @@ func (fs *FSCache) Close() {
 
 // init does the initial setup of walking
 func (fs *FSCache) init() {
-	filepath.WalkDir(fs.Root, func(path string, d os.DirEntry, err error) error {
-		select {
-		case <-fs.ctx.Done():
-			return fs.ctx.Err()
-		default:
+	if entry, err := getDirEntry(fs.Root); err != nil {
+		fs.logger.WithError(err).WithField("root", fs.Root).Errorf("error getting entry for root")
+	} else {
+		// first "walk" the root directory itself
+		if err := fs.walkFunc(fs.Root, entry, nil); err != nil {
+			fs.logger.WithError(err).Errorf("error walking root")
 		}
+	}
 
-		if fs.ignore.Match(path, d.IsDir()) {
-			shared.Logger().Debugf("Skipping %q", path)
+	filepath.WalkDir(fs.Root, fs.walkFunc)
+}
+
+func (fs *FSCache) walkFunc(path string, d os.DirEntry, err error) error {
+	select {
+	case <-fs.ctx.Done():
+		return fs.ctx.Err()
+	default:
+	}
+
+	isDir := false
+	updatedAt := time.Time{}
+	if d != nil {
+		isDir = d.IsDir()
+
+		if info, err := d.Info(); err == nil {
+			updatedAt = info.ModTime().UTC()
+		}
+	}
+
+	if fs.ignore.Match(path, isDir) {
+		shared.Logger().Debugf("Skipping %q", path)
+		if d.IsDir() {
 			return filepath.SkipDir
+		} else {
+			return nil
 		}
+	}
 
-		info, err := d.Info()
-		if err != nil {
-			return err
-		}
+	abs, err := filepath.Abs(path)
+	if err != nil {
+		return err
+	}
 
-		abs, err := filepath.Abs(path)
-		if err != nil {
-			return err
-		}
-
-		return fs.fileList.Add(fslist.AddData{
-			Name:      abs,
-			UpdatedAt: info.ModTime(),
-			IsDir:     d.IsDir(),
-		})
+	return fs.fileList.Add(fslist.AddData{
+		Name:      abs,
+		UpdatedAt: &updatedAt,
+		IsDir:     isDir,
 	})
 }
 

@@ -7,8 +7,9 @@ import (
 )
 
 func BenchmarkAdd(b *testing.B) {
+	updatedAt := time.Now()
 	testData := []AddData{
-		{Name: "/foo/bar/baz", IsDir: true, UpdatedAt: time.Now()},
+		{Name: "/foo/bar/baz", IsDir: true, UpdatedAt: &updatedAt},
 	}
 
 	for _, mode := range []Mode{

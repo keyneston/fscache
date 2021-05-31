@@ -6,7 +6,8 @@ type EventType int
 var _ func(string) (Watcher, error) = New
 
 const (
-	EventTypeAdd EventType = iota
+	EventUnknown EventType = iota
+	EventTypeAdd
 	EventTypeDelete
 )
 

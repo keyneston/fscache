@@ -95,7 +95,7 @@ func (c createFile) with(lines ...string) createFile {
 	return c
 }
 
-func (c createFile) done() {
+func (c createFile) done() string {
 	dir := filepath.Dir(c.path)
 	err := os.MkdirAll(dir, 0755)
 	require.NoError(c.t, err, "Unable to create dir: %q", dir)
@@ -107,4 +107,6 @@ func (c createFile) done() {
 	for _, l := range c.contents {
 		fmt.Fprintln(f, l)
 	}
+
+	return c.path
 }

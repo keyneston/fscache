@@ -3,7 +3,7 @@ package integration
 import (
 	"context"
 	"io"
-	"path/filepath"
+	"os"
 	"sort"
 	"testing"
 	"time"
@@ -12,21 +12,22 @@ import (
 	"github.com/keyneston/fscache/proto"
 )
 
-func TestIgnoreEndToEnd(t *testing.T) {
+func TestRemoveFile(t *testing.T) {
 	i := New(t, "integration-ignore")
 
 	go i.cache.Run()
 	defer i.CleanUp()
 
-	i.createFile(".gitignore").with("*.ignored").done()
-	i.createFile("foo.ignored").done()
-	i.createFile("bar.ignored").done()
-	i.createFile("dir.ignored/this-file").done()
-	i.createFile("bar.not").done()
+	fooTXT := i.createFile("foo.txt").done()
+	barTXT := i.createFile("bar.txt").done()
+
+	time.Sleep(1 * time.Second)
+
+	i.require.NoError(os.Remove(fooTXT), "removing file")
 
 	time.Sleep(2 * time.Second)
 
-	stream, err := i.client.GetFiles(context.Background(), &proto.ListRequest{})
+	stream, err := i.client.GetFiles(context.Background(), &proto.ListRequest{FilesOnly: true})
 	i.require.NoError(err, "Error getting files")
 
 	res := []fslist.AddData{}
@@ -45,14 +46,13 @@ func TestIgnoreEndToEnd(t *testing.T) {
 	}
 
 	expected := []fslist.AddData{
-		{Name: filepath.Join(i.testDir, ".gitignore"), IsDir: false},
-		{Name: filepath.Join(i.testDir, "bar.not"), IsDir: false},
-		{Name: i.testDir, IsDir: true},
+		{Name: barTXT, IsDir: false},
+		//{Name: i.testDir, IsDir: true},
 	}
 
 	sort.Sort(fslist.ByPath(res))
 	sort.Sort(fslist.ByPath(expected))
 
-	i.assert.Len(res, 3)
+	i.assert.Len(res, len(expected))
 	i.assert.ElementsMatch(expected, res)
 }

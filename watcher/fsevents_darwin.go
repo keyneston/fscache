@@ -3,8 +3,6 @@
 package watcher
 
 import (
-	"errors"
-	"os"
 	"sync"
 	"time"
 
@@ -17,7 +15,7 @@ func New(root string) (Watcher, error) {
 		eventStream: &fsevents.EventStream{
 			Paths:   []string{root},
 			Latency: time.Second,
-			Flags:   fsevents.WatchRoot | fsevents.FileEvents,
+			Flags:   fsevents.FileEvents,
 		},
 		closeCh:   make(chan bool),
 		closeOnce: &sync.Once{},
@@ -49,35 +47,37 @@ func (d *DarwinWatcher) run() {
 	}
 }
 
-func checkFlag(flags, needle fsevents.EventFlags) bool {
-	return flags&needle == needle
-}
-
 func (d *DarwinWatcher) handleEvents(events []fsevents.Event) {
+	logger := shared.Logger().WithField("module", "fsevents_darwin").Logger
+
 	translated := []Event{}
 	for _, e := range events {
 		t := Event{Path: e.Path}
+
 		switch {
-		case checkFlag(e.Flags, fsevents.ItemRemoved):
+		case checkBitFlag(e.Flags, fsevents.ItemRemoved):
 			t.Type = EventTypeDelete
-		case checkFlag(e.Flags, fsevents.ItemCreated):
+		case checkBitFlag(e.Flags, fsevents.ItemCreated):
 			t.Type = EventTypeAdd
+		case checkBitFlag(e.Flags, fsevents.ItemRenamed):
+			t.Type = EventTypeDelete
+		case checkBitFlag(e.Flags, fsevents.MustScanSubDirs):
+			logger.WithField("event", e).Warn("MustScanSubDirs, skipping")
+			continue
 		}
 
-		stat, err := os.Stat(e.Path)
-		if err != nil {
-			if !errors.Is(err, os.ErrNotExist) {
-				shared.Logger().WithField("service", "watcher").WithField("path", e.Path).Error(err)
-			}
-
-			continue // TODO Should we do something else here?
+		if t.Type == EventUnknown {
+			logger.WithField("event", e).WithField("flags", flagsToString(e.Flags)).Warn("Unknown event type, skipping")
+			continue
 		}
-		t.Dir = stat.IsDir()
 
+		t.Dir = checkBitFlag(e.Flags, fsevents.ItemIsDir)
 		translated = append(translated, t)
 	}
 
-	d.stream <- translated
+	if len(translated) != 0 {
+		d.stream <- translated
+	}
 }
 
 func (d *DarwinWatcher) Stop() {

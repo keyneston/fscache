@@ -10,7 +10,7 @@ import (
 
 type AddData struct {
 	Name      string
-	UpdatedAt time.Time
+	UpdatedAt *time.Time
 	IsDir     bool
 }
 
