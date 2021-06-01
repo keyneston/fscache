@@ -52,6 +52,7 @@ type FSCache struct {
 	cancel        context.CancelFunc
 	closeOnce     *sync.Once
 	signalRestart bool
+	wg            *sync.WaitGroup
 
 	logger zerolog.Logger
 }
@@ -78,6 +79,7 @@ func New(socketLocation, root string, mode fslist.Mode) (*FSCache, error) {
 		cancel:    cancel,
 		ctx:       ctx,
 		closeOnce: &sync.Once{},
+		wg:        &sync.WaitGroup{},
 		ignore:    gitignore.NewGitIgnoreFromReader("/", bytes.NewBufferString(watchIgnores)),
 	}
 
@@ -98,6 +100,7 @@ func (fs *FSCache) Run() bool {
 
 	fs.setSignalHandlers()
 	fs.watcher.Start()
+
 	fs.init()
 
 	flushTick := time.NewTicker(DefaultFlushTime)
@@ -187,13 +190,20 @@ func (fs *FSCache) Close() {
 		fs.logger.Warn().Msg("Received stop, shutting down")
 		fs.watcher.Stop()
 		fs.cancel()
-		fs.fileList.Close()
 		go fs.server.GracefulStop()
+
+		// Wait for wg to finish before closing the database.
+		fs.wg.Wait()
+
+		fs.fileList.Close()
 	})
 }
 
 // init does the initial setup of walking
 func (fs *FSCache) init() {
+	fs.wg.Add(1)
+	defer fs.wg.Done()
+
 	if entry, err := getDirEntry(fs.Root); err != nil {
 		fs.logger.Error().Err(err).Str("root", fs.Root).Msg("error getting entry for root")
 	} else {
@@ -293,5 +303,5 @@ func (fs *FSCache) Shutdown(ctx context.Context, req *proto.ShutdownRequest) (*e
 	}
 
 	fs.Close()
-	return nil, nil
+	return &emptypb.Empty{}, nil
 }

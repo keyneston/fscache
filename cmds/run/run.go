@@ -4,8 +4,8 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"log"
 	"os"
+	"path/filepath"
 	"syscall"
 
 	"github.com/google/subcommands"
@@ -75,12 +75,43 @@ func (c *Command) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) 
 		return shared.Exitf("Error starting monitor: %v", err)
 	}
 
-	if restart := fs.Run(); restart {
-		log.Printf("About to exec: %q %v", os.Args[0], os.Args[1:])
-		if err := syscall.Exec(os.Args[0], os.Args, os.Environ()); err != nil {
-			return shared.Exitf("Error restarting: %v", err)
-		}
+	if shouldRestart := fs.Run(); shouldRestart {
+		// Restart will exec and cause no return value if restart is successful
+		return shared.Exitf("Error restarting: %v", restart())
+
 	}
 
 	return subcommands.ExitSuccess
+}
+
+func restart() error {
+	bin, err := which(os.Args[0])
+	if err != nil {
+		return fmt.Errorf("error locating %q: %w", os.Args[0], err)
+	}
+
+	shared.Logger().Debug().Str("bin", bin).Strs("args", os.Args).Msg("restarting")
+	return syscall.Exec(bin, os.Args, os.Environ())
+}
+
+func which(bin string) (string, error) {
+	if filepath.IsAbs(bin) {
+		return bin, nil
+	}
+
+	pathSegments := filepath.SplitList(os.Getenv("PATH"))
+	for _, p := range pathSegments {
+		files, err := os.ReadDir(p)
+		if err != nil {
+			continue
+		}
+
+		for _, f := range files {
+			if f.Name() == bin {
+				return filepath.Join(p, bin), nil
+			}
+		}
+	}
+
+	return "", fmt.Errorf("unable to locate binary")
 }
