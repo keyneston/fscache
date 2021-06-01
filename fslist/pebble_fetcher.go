@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 
 	"github.com/cockroachdb/pebble"
-	"github.com/sirupsen/logrus"
+	"github.com/rs/zerolog"
 )
 
 type pebbleFetcher struct {
@@ -13,7 +13,7 @@ type pebbleFetcher struct {
 	count       int
 	ch          chan<- AddData
 	opts        ReadOptions
-	logger      *logrus.Logger
+	logger      *zerolog.Logger
 }
 
 func (pf *pebbleFetcher) Fetch() (int, error) {
@@ -67,10 +67,11 @@ func (pf *pebbleFetcher) fetchRange(lower, upper []byte) (int, error) {
 		}
 	}
 
-	pf.logger.WithField("bounds", logrus.Fields{
-		"lower": lower,
-		"upper": upper,
-	}).WithField("module", "pebbleFetcher").Debug("Doing a fetchRange")
+	pf.logger.Debug().Dict("bounds",
+		zerolog.Dict().
+			Bytes("lower", lower).
+			Bytes("upper", upper),
+	).Msg("Doing a fetchRange")
 
 	iter := pf.db.NewIter(iterOpts)
 	defer iter.Close()
@@ -84,11 +85,11 @@ func (pf *pebbleFetcher) fetchRange(lower, upper []byte) (int, error) {
 		if err := json.Unmarshal(iter.Value(), &data); err != nil {
 			return pf.count, err
 		}
-		pf.logger.WithField("file", data.Name).Tracef("Checking")
+		pf.logger.Trace().Str("file", data.Name).Msg("checking")
 
 		ignore := pf.ignoreCache.Get(data.Name)
 		if ignore != nil && ignore.Match(data.Name, data.IsDir) {
-			pf.logger.WithField("file", data.Name).Tracef("Skipping")
+			pf.logger.Trace().Str("file", data.Name).Msg("skipping")
 
 			// This requires that the final character be a '/' otherwise the
 			// skip will skip adjacent files:
@@ -112,10 +113,10 @@ func (pf *pebbleFetcher) fetchRange(lower, upper []byte) (int, error) {
 		}
 
 		if pf.opts.DirsOnly && !data.IsDir {
-			pf.logger.WithField("file", data.Name).Tracef("Skipping non-dir")
+			pf.logger.Trace().Str("file", data.Name).Msg("skipping non-dir")
 			continue
 		} else if pf.opts.FilesOnly && data.IsDir {
-			pf.logger.WithField("file", data.Name).Tracef("Skipping non-file")
+			pf.logger.Trace().Str("file", data.Name).Msg("Skipping non-file")
 			continue
 		}
 

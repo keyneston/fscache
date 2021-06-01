@@ -7,12 +7,12 @@ import (
 	"github.com/google/subcommands"
 	"github.com/keyneston/fscache/internal/shared"
 	"github.com/keyneston/fscache/proto"
-	"github.com/sirupsen/logrus"
+	"github.com/rs/zerolog"
 )
 
 type Command struct {
 	*shared.Config
-	logger *logrus.Logger
+	logger zerolog.Logger
 
 	restart bool
 }
@@ -31,7 +31,7 @@ func (c *Command) SetFlags(f *flag.FlagSet) {
 }
 
 func (c *Command) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
-	c.logger = shared.Logger().WithField("command", "shutdown").Logger
+	c.logger = shared.Logger().With().Str("command", "shutdown").Logger()
 
 	client, err := c.Client()
 	if err != nil {

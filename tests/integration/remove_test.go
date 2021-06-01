@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"os"
+	"path/filepath"
 	"sort"
 	"testing"
 	"time"
@@ -20,10 +21,13 @@ func TestRemoveFile(t *testing.T) {
 
 	fooTXT := i.createFile("foo.txt").done()
 	barTXT := i.createFile("bar.txt").done()
+	bazTXT := i.createFile("baz.txt").done()
 
 	time.Sleep(1 * time.Second)
 
+	newBaz := filepath.Join(i.testDir, "new-baz.txt")
 	i.require.NoError(os.Remove(fooTXT), "removing file")
+	i.require.NoError(os.Rename(bazTXT, newBaz))
 
 	time.Sleep(2 * time.Second)
 
@@ -47,6 +51,7 @@ func TestRemoveFile(t *testing.T) {
 
 	expected := []fslist.AddData{
 		{Name: barTXT, IsDir: false},
+		{Name: newBaz, IsDir: false},
 		//{Name: i.testDir, IsDir: true},
 	}
 

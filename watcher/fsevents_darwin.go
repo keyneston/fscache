@@ -48,7 +48,7 @@ func (d *DarwinWatcher) run() {
 }
 
 func (d *DarwinWatcher) handleEvents(events []fsevents.Event) {
-	logger := shared.Logger().WithField("module", "fsevents_darwin").Logger
+	logger := shared.Logger().With().Str("module", "fsevents_darwin").Logger()
 
 	translated := []Event{}
 	for _, e := range events {
@@ -60,14 +60,14 @@ func (d *DarwinWatcher) handleEvents(events []fsevents.Event) {
 		case checkBitFlag(e.Flags, fsevents.ItemCreated):
 			t.Type = EventTypeAdd
 		case checkBitFlag(e.Flags, fsevents.ItemRenamed):
-			t.Type = EventTypeDelete
+			t.Type = EventTypeAdd
 		case checkBitFlag(e.Flags, fsevents.MustScanSubDirs):
-			logger.WithField("event", e).Warn("MustScanSubDirs, skipping")
+			logger.Warn().Interface("event", e).Msg("MustScanSubDirs, skipping")
 			continue
 		}
 
 		if t.Type == EventUnknown {
-			logger.WithField("event", e).WithField("flags", flagsToString(e.Flags)).Warn("Unknown event type, skipping")
+			logger.Warn().Interface("event", e).Strs("flags", flagsToStrings(e.Flags)).Msg("Unknown event type, skipping")
 			continue
 		}
 

@@ -1,9 +1,6 @@
 package watcher
 
 import (
-	"fmt"
-	"strings"
-
 	"github.com/fsnotify/fsevents"
 )
 
@@ -33,7 +30,7 @@ var flagMappings = map[string]fsevents.EventFlags{
 	"ItemIsSymlink":     fsevents.ItemIsSymlink,
 }
 
-func flagsToString(flags fsevents.EventFlags) string {
+func flagsToStrings(flags fsevents.EventFlags) []string {
 	flagStrs := []string{}
 
 	for k, v := range flagMappings {
@@ -42,5 +39,5 @@ func flagsToString(flags fsevents.EventFlags) string {
 		}
 	}
 
-	return fmt.Sprintf("fsevents.EventFlags{%s}", strings.Join(flagStrs, ", "))
+	return flagStrs
 }

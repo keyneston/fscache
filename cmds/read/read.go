@@ -12,12 +12,12 @@ import (
 	"github.com/google/subcommands"
 	"github.com/keyneston/fscache/internal/shared"
 	"github.com/keyneston/fscache/proto"
-	"github.com/sirupsen/logrus"
+	"github.com/rs/zerolog"
 )
 
 type Command struct {
 	*shared.Config
-	logger *logrus.Logger
+	logger zerolog.Logger
 
 	dirsOnly  bool
 	filesOnly bool
@@ -50,7 +50,7 @@ func (c *Command) SetFlags(f *flag.FlagSet) {
 }
 
 func (c *Command) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
-	c.logger = shared.Logger().WithField("command", "read").Logger
+	c.logger = shared.Logger().With().Str("command", "read").Logger()
 
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -89,7 +89,7 @@ func (c *Command) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) 
 		return shared.Exitf("Error fetching results: %v", err)
 	}
 
-	c.logger.Debugf("Got stream")
+	c.logger.Debug().Msg("got stream")
 	for {
 		files, err := stream.Recv()
 		if errors.Is(err, io.EOF) {
@@ -114,7 +114,7 @@ func (c *Command) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) 
 		}
 	}
 
-	c.logger.WithError(err).Debugf("Done")
+	c.logger.Debug().Err(err).Msg("done")
 
 	return subcommands.ExitSuccess
 }

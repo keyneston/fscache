@@ -8,7 +8,7 @@ import (
 
 	"github.com/cockroachdb/pebble"
 	"github.com/keyneston/fscache/internal/shared"
-	"github.com/sirupsen/logrus"
+	"github.com/rs/zerolog"
 )
 
 const (
@@ -23,7 +23,7 @@ type PebbleList struct {
 	location    string
 	ignoreCache *IgnoreCache
 
-	logger *logrus.Entry
+	logger *zerolog.Logger
 }
 
 func NewPebble() (FSList, error) {
@@ -40,8 +40,8 @@ func openPebble() (FSList, error) {
 		return nil, err
 	}
 
-	logger := shared.Logger().WithField("database", location).WithField("mode", "pebble")
-	logger.Debugf("opening pebble database")
+	logger := shared.Logger().With().Str("database", location).Str("mode", "pebble").Logger()
+	logger.Debug().Msg("opening pebble database")
 
 	if location == "" {
 		return nil, fmt.Errorf("Must supply a location for the database")
@@ -60,7 +60,7 @@ func openPebble() (FSList, error) {
 		db:          db,
 		ignoreCache: &IgnoreCache{},
 		location:    location,
-		logger:      logger,
+		logger:      &logger,
 	}
 
 	return s, nil
@@ -79,7 +79,7 @@ func (s *PebbleList) Pending() bool {
 }
 
 func (s *PebbleList) Add(data AddData) error {
-	s.logger.WithField("data", data).Tracef("Adding")
+	s.logger.Trace().Interface("data", data).Msg("adding")
 
 	encoded, err := json.Marshal(data)
 	if err != nil {
@@ -100,7 +100,7 @@ func (s *PebbleList) Add(data AddData) error {
 }
 
 func (s *PebbleList) Delete(data AddData) error {
-	s.logger.WithField("data", data).Tracef("Deleting")
+	s.logger.Trace().Interface("data", data).Msg("deleting")
 	return s.db.Delete(data.pebbleKey(), pebble.NoSync)
 }
 
@@ -112,10 +112,11 @@ func (s *PebbleList) Len() int {
 func (s *PebbleList) newPebbleFetcher(opts ReadOptions) (*pebbleFetcher, <-chan AddData) {
 	ch := make(chan AddData, 1)
 
+	l := s.logger.With().Str("module", "pebbleFetcher").Logger()
 	return &pebbleFetcher{
 		db:          s.db,
 		ignoreCache: s.ignoreCache,
-		logger:      s.logger.WithField("module", "pebbleFetcher").Logger,
+		logger:      &l,
 		ch:          ch,
 		opts:        opts,
 		count:       0,

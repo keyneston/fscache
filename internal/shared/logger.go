@@ -2,49 +2,52 @@ package shared
 
 import (
 	"os"
+	"sync"
 
+	"github.com/rs/zerolog"
 	"github.com/sirupsen/logrus"
 )
 
 var debug bool
 var level string = "error"
-var logger *logrus.Logger
+var logger *zerolog.Logger
+var configLoggerOnce *sync.Once = &sync.Once{}
 var pretty bool
 
-func Logger() *logrus.Logger {
-	if logger != nil {
-		return logger
-	}
+func init() {
+	zerolog.SetGlobalLevel(zerolog.ErrorLevel)
+	l := zerolog.New(os.Stderr)
+	logger = &l
+}
 
-	if debug {
-		level = "debug"
-	}
+func Logger() *zerolog.Logger {
+	configLoggerOnce.Do(func() {
+		if debug {
+			level = "debug"
+		}
 
-	logger = logrus.New()
-	logger.SetLevel(logrus.ErrorLevel)
-	logger.Out = os.Stderr
-	logger.SetFormatter(&logrus.JSONFormatter{PrettyPrint: pretty})
+		parsedLevel, err := zerolog.ParseLevel(level)
+		if err != nil {
+			logger.Error().Str("input", level).Msgf("Unable to parse level %q; defaulting to %q", level, logrus.ErrorLevel)
+			parsedLevel = zerolog.ErrorLevel
+		}
+		zerolog.SetGlobalLevel(parsedLevel)
 
-	parsedLevel, err := logrus.ParseLevel(level)
-	if err != nil {
-		logger.Errorf("Unable to parse level %q; defaulting to %q", level, logrus.ErrorLevel)
-		parsedLevel = logrus.ErrorLevel
-	}
-	logger.SetLevel(parsedLevel)
+	})
 
 	return logger
 }
 
-func SetLevel(lvl logrus.Level) {
+func SetLevel(lvl zerolog.Level) {
 	level = lvl.String()
-	if logger != nil {
-		logger.SetLevel(lvl)
-	}
+	zerolog.SetGlobalLevel(lvl)
 }
 
 func SetPrettyLogging() {
 	pretty = true
-	if logger != nil {
-		logger.SetFormatter(&logrus.JSONFormatter{PrettyPrint: true})
-	}
+
+	l := logger.Output(&zerolog.ConsoleWriter{
+		Out: os.Stderr,
+	})
+	logger = &l
 }

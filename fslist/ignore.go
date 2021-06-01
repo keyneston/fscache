@@ -18,7 +18,7 @@ func (ic *IgnoreCache) Add(file string) error {
 	}
 
 	superior := ic.findSuperior(file)
-	shared.Logger().WithField("module", "IgnoreCache").WithField("file", file).WithField("superior", superior).Trace()
+	shared.Logger().Trace().Str("module", "IgnoreCache").Str("file", file).Strs("superior", superior).Msg("")
 
 	matcher, err := gitignore.NewGitIgnore(file, ic.findSuperior(file)...)
 	if err != nil {

@@ -17,7 +17,7 @@ import (
 	"github.com/keyneston/fscache/proto"
 	"github.com/keyneston/fscache/watcher"
 	"github.com/monochromegane/go-gitignore"
-	"github.com/sirupsen/logrus"
+	"github.com/rs/zerolog"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -53,7 +53,7 @@ type FSCache struct {
 	closeOnce     *sync.Once
 	signalRestart bool
 
-	logger *logrus.Logger
+	logger zerolog.Logger
 }
 
 func New(socketLocation, root string, mode fslist.Mode) (*FSCache, error) {
@@ -73,7 +73,7 @@ func New(socketLocation, root string, mode fslist.Mode) (*FSCache, error) {
 		Root:      root,
 		watcher:   watcher,
 		socket:    socket,
-		logger:    shared.Logger().WithField("object", "fscache").Logger,
+		logger:    shared.Logger().With().Str("object", "fscache").Logger(),
 		server:    grpc.NewServer(),
 		cancel:    cancel,
 		ctx:       ctx,
@@ -109,11 +109,11 @@ func (fs *FSCache) Run() bool {
 				fs.handleEvent(e)
 			}
 		case <-fs.ctx.Done():
-			fs.logger.WithError(fs.ctx.Err()).Warn("Receive context.Done")
+			fs.logger.Warn().Err(fs.ctx.Err()).Msg("receive context.Done")
 			return fs.signalRestart
 		case <-flushTick.C:
 			if err := fs.fileList.Flush(); err != nil {
-				fs.logger.WithError(err).Error("error flushing fslist")
+				fs.logger.Error().Err(err).Msg("error flushing fslist")
 			}
 		}
 	}
@@ -164,27 +164,27 @@ func checkSkipPath(ignore gitignore.IgnoreMatcher, path string, dir bool) bool {
 
 func (fs *FSCache) handleEvent(e watcher.Event) {
 	if checkSkipPath(fs.ignore, e.Path, e.Dir) {
-		fs.logger.Debugf("Skipping %#q", e.Path)
+		fs.logger.Debug().Msgf("Skipping %#q", e.Path)
 		return
 	}
 
 	switch e.Type {
 	case watcher.EventTypeDelete:
-		fs.logger.WithField("path", e.Path).Trace("removing")
+		fs.logger.Trace().Str("path", e.Path).Msg("removing")
 		if err := fs.fileList.Delete(eventToAddData(e)); err != nil {
-			fs.logger.Errorf("Error deleting file: %v", err)
+			fs.logger.Error().Str("path", e.Path).Err(err).Msgf("Error deleting file: %v", err)
 		}
 	case watcher.EventTypeAdd:
-		fs.logger.WithField("path", e.Path).Trace("adding")
+		fs.logger.Trace().Str("path", e.Path).Msg("adding")
 		if err := fs.fileList.Add(eventToAddData(e)); err != nil {
-			fs.logger.Errorf("Error adding file: %v", err)
+			fs.logger.Error().Str("path", e.Path).Err(err).Msgf("Error adding file: %v", err)
 		}
 	}
 }
 
 func (fs *FSCache) Close() {
 	fs.closeOnce.Do(func() {
-		fs.logger.Warn("Received stop, shutting down")
+		fs.logger.Warn().Msg("Received stop, shutting down")
 		fs.watcher.Stop()
 		fs.cancel()
 		fs.fileList.Close()
@@ -195,11 +195,11 @@ func (fs *FSCache) Close() {
 // init does the initial setup of walking
 func (fs *FSCache) init() {
 	if entry, err := getDirEntry(fs.Root); err != nil {
-		fs.logger.WithError(err).WithField("root", fs.Root).Errorf("error getting entry for root")
+		fs.logger.Error().Err(err).Str("root", fs.Root).Msg("error getting entry for root")
 	} else {
 		// first "walk" the root directory itself
 		if err := fs.walkFunc(fs.Root, entry, nil); err != nil {
-			fs.logger.WithError(err).Errorf("error walking root")
+			fs.logger.Error().Err(err).Msg("error walking root")
 		}
 	}
 
@@ -224,7 +224,7 @@ func (fs *FSCache) walkFunc(path string, d os.DirEntry, err error) error {
 	}
 
 	if fs.ignore.Match(path, isDir) {
-		shared.Logger().Debugf("Skipping %q", path)
+		fs.logger.Debug().Str("path", path).Msgf("Skipping %q", path)
 		if d.IsDir() {
 			return filepath.SkipDir
 		} else {
@@ -245,7 +245,7 @@ func (fs *FSCache) walkFunc(path string, d os.DirEntry, err error) error {
 }
 
 func (fs *FSCache) GetFiles(req *proto.ListRequest, srv proto.FSCache_GetFilesServer) error {
-	fs.logger.WithField("req", req).Debugf("Received request")
+	fs.logger.Debug().Interface("req", req).Msg("Received request")
 
 	opts := fslist.ReadOptions{
 		DirsOnly:   req.DirsOnly,

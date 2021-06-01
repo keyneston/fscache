@@ -31,7 +31,7 @@ func OpenSQL() (FSList, error) {
 	}
 	location = filepath.Join(location, "fscache.sqlite")
 
-	shared.Logger().WithField("database", location).Debugf("opening sqlite3 database")
+	shared.Logger().Debug().Str("database", location).Msg("opening sqlite3 database")
 	db, err := sql.Open("sqlite3", fmt.Sprintf("file:%s", location))
 	if err != nil {
 		return nil, fmt.Errorf("Error creating SQList: %w", err)
@@ -101,8 +101,8 @@ func (s *SQList) Fetch(opts ReadOptions) <-chan AddData {
 	go func() {
 		defer close(ch)
 
-		logger := shared.Logger().WithField("options", opts)
-		logger.Debugf("Copy called")
+		logger := shared.Logger().With().Interface("options", opts).Logger()
+		logger.Debug().Msg("fetch called")
 
 		// sqlite interprets a negative limit as all rows
 		stmt := sq.Select("filename").From("files")
@@ -125,15 +125,15 @@ func (s *SQList) Fetch(opts ReadOptions) <-chan AddData {
 
 		sqlStmt, args, err := stmt.ToSql()
 		if err != nil {
-			logger.WithError(err).Error()
+			logger.Error().Err(err).Msg("")
 			return
 		}
 
-		logger.WithField("sql", sqlStmt).Debugf("executing sql")
+		logger.Debug().Str("sql", sqlStmt).Msg("executing sql")
 
 		rows, err := s.db.Query(sqlStmt, args...)
 		if err != nil {
-			logger.WithError(err).Error()
+			logger.Error().Err(err).Msg("")
 			return
 		}
 		defer rows.Close()
@@ -143,7 +143,7 @@ func (s *SQList) Fetch(opts ReadOptions) <-chan AddData {
 			var filename string
 
 			if err := rows.Scan(&filename); err != nil {
-				logger.WithError(err).Error()
+				logger.Error().Err(err).Msg("")
 				return
 			}
 
@@ -152,7 +152,7 @@ func (s *SQList) Fetch(opts ReadOptions) <-chan AddData {
 			}
 			count++
 		}
-		shared.Logger().WithField("rows", count).Debugf("Finished copying")
+		shared.Logger().Debug().Int("rows", count).Msg("finished copying")
 	}()
 
 	return ch
