@@ -79,7 +79,7 @@ func (s *PebbleList) Pending() bool {
 }
 
 func (s *PebbleList) Add(data AddData) error {
-	s.logger.Trace().Interface("data", data).Msg("adding")
+	s.logger.Trace().Object("data", data).Msg("adding")
 
 	encoded, err := json.Marshal(data)
 	if err != nil {
@@ -100,7 +100,7 @@ func (s *PebbleList) Add(data AddData) error {
 }
 
 func (s *PebbleList) Delete(data AddData) error {
-	s.logger.Trace().Interface("data", data).Msg("deleting")
+	s.logger.Trace().Object("data", data).Msg("deleting")
 	return s.db.Delete(data.pebbleKey(), pebble.NoSync)
 }
 

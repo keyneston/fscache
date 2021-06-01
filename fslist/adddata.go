@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/keyneston/fscache/proto"
+	"github.com/rs/zerolog"
 )
 
 type AddData struct {
@@ -28,6 +29,14 @@ func (a AddData) String() string {
 	}
 
 	return fmt.Sprintf("AddData{%s%s}", a.Name, dirStr)
+}
+
+func (a AddData) MarshalZerologObject(e *zerolog.Event) {
+	e.Str("name", a.Name).Bool("isDir", a.IsDir)
+
+	if a.UpdatedAt != nil {
+		e.Time("updatedAt", *a.UpdatedAt)
+	}
 }
 
 func (a AddData) ToProtoFile() *proto.File {
