@@ -1,3 +1,5 @@
+// +build darwin
+
 package watcher
 
 import "github.com/fsnotify/fsevents"

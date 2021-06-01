@@ -3,6 +3,7 @@
 package watcher
 
 import (
+	"os"
 	"sync"
 	"time"
 
@@ -50,16 +51,28 @@ func (d *DarwinWatcher) run() {
 func (d *DarwinWatcher) handleEvents(events []fsevents.Event) {
 	logger := shared.Logger().With().Str("module", "fsevents_darwin").Logger()
 
+	logger.Trace().Interface("events", events).Msg("got events")
 	translated := []Event{}
 	for _, e := range events {
 		t := Event{Path: e.Path}
 
 		switch {
+		// ItemRenamed needs to be first, that way we can check if the file
+		// exists or not and use that for determaining whether it was
+		// deleted or created.
+		case checkBitFlag(e.Flags, fsevents.ItemRenamed):
+			logger.Trace().Interface("event", e).Strs("flags", flagsToStrings(e.Flags)).Msg("ItemRenamed")
+			_, err := os.Stat(e.Path)
+			if err != nil {
+				t.Type = EventTypeDelete
+			} else {
+				t.Type = EventTypeAdd
+			}
 		case checkBitFlag(e.Flags, fsevents.ItemRemoved):
+			logger.Trace().Interface("event", e).Strs("flags", flagsToStrings(e.Flags)).Msg("ItemRemoved")
 			t.Type = EventTypeDelete
 		case checkBitFlag(e.Flags, fsevents.ItemCreated):
-			t.Type = EventTypeAdd
-		case checkBitFlag(e.Flags, fsevents.ItemRenamed):
+			logger.Trace().Interface("event", e).Strs("flags", flagsToStrings(e.Flags)).Msg("ItemCreated")
 			t.Type = EventTypeAdd
 		case checkBitFlag(e.Flags, fsevents.MustScanSubDirs):
 			logger.Warn().Interface("event", e).Msg("MustScanSubDirs, skipping")
