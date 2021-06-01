@@ -9,13 +9,13 @@ import (
 	"github.com/keyneston/fscache/fscache"
 	"github.com/keyneston/fscache/internal/shared"
 	"github.com/keyneston/fscache/proto"
-	"github.com/sirupsen/logrus"
+	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func init() {
-	shared.SetLevel(logrus.TraceLevel)
+	shared.SetLevel(zerolog.TraceLevel)
 	shared.SetPrettyLogging()
 }
 
