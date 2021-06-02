@@ -5,7 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"path/filepath"
+	"os/exec"
 	"syscall"
 
 	"github.com/google/subcommands"
@@ -85,33 +85,11 @@ func (c *Command) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) 
 }
 
 func restart() error {
-	bin, err := which(os.Args[0])
+	bin, err := exec.LookPath(os.Args[0])
 	if err != nil {
 		return fmt.Errorf("error locating %q: %w", os.Args[0], err)
 	}
 
 	shared.Logger().Debug().Str("bin", bin).Strs("args", os.Args).Msg("restarting")
 	return syscall.Exec(bin, os.Args, os.Environ())
-}
-
-func which(bin string) (string, error) {
-	if filepath.IsAbs(bin) {
-		return bin, nil
-	}
-
-	pathSegments := filepath.SplitList(os.Getenv("PATH"))
-	for _, p := range pathSegments {
-		files, err := os.ReadDir(p)
-		if err != nil {
-			continue
-		}
-
-		for _, f := range files {
-			if f.Name() == bin {
-				return filepath.Join(p, bin), nil
-			}
-		}
-	}
-
-	return "", fmt.Errorf("unable to locate binary")
 }

@@ -298,10 +298,13 @@ func (fs *FSCache) GetFiles(req *proto.ListRequest, srv proto.FSCache_GetFilesSe
 }
 
 func (fs *FSCache) Shutdown(ctx context.Context, req *proto.ShutdownRequest) (*emptypb.Empty, error) {
+	fs.wg.Add(1)
+	defer fs.wg.Done()
+
 	if req != nil && req.Restart {
 		fs.signalRestart = true
 	}
 
-	fs.Close()
+	go fs.Close()
 	return &emptypb.Empty{}, nil
 }
