@@ -3,7 +3,6 @@ package listignores
 import (
 	"context"
 	"flag"
-	"fmt"
 	"io"
 	"os"
 
@@ -31,7 +30,6 @@ func (c *Command) SetFlags(f *flag.FlagSet) {
 
 func (c *Command) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
 	io.Copy(os.Stdout, fscache.GlobalIgnoreList())
-	fmt.Fprintln(os.Stdout, "")
 
 	return subcommands.ExitSuccess
 }
