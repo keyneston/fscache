@@ -1,4 +1,4 @@
-package fscache
+package ignorer
 
 import (
 	"bytes"
@@ -27,6 +27,13 @@ node_modules/
 Application Support/
 .cache/
 .DS_File
+.Trash
+.rustup/toolchain
+.rustup/update-hashes
+.rustup/tmp
+.rustup/downloads
+pkg/darwin_amd64/
+pkg/darwin_arm/
 `
 	ignoredKeys := []string{"GOMODCACHE", "GOCACHE", "GOTOOLDIR", "GOROOT"}
 
@@ -36,6 +43,10 @@ Application Support/
 		if val := os.Getenv(key); val != "" {
 			fmt.Fprintln(buf, val)
 		}
+	}
+
+	if gopath := os.Getenv("GOPATH"); gopath != "" {
+		fmt.Fprintln(buf, filepath.Join(gopath, "pkg"))
 	}
 
 	goVars, err := getGoVars()
@@ -80,8 +91,8 @@ func getGoVars() (map[string]string, error) {
 	return vars, nil
 }
 
-func NewGlobalIgnore(root string) GlobalIgnore {
-	matcher := gitignore.NewGitIgnoreFromReader(root, GlobalIgnoreList())
+func NewGlobalIgnore() GlobalIgnore {
+	matcher := gitignore.NewGitIgnoreFromReader("/", GlobalIgnoreList())
 
 	return GlobalIgnore{
 		matcher: matcher,

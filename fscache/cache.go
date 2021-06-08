@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/keyneston/fscache/fslist"
+	"github.com/keyneston/fscache/ignorer"
 	"github.com/keyneston/fscache/internal/shared"
 	"github.com/keyneston/fscache/proto"
 	"github.com/keyneston/fscache/watcher"
@@ -32,7 +33,7 @@ type FSCache struct {
 	watcher  watcher.Watcher
 	socket   net.Listener
 	server   *grpc.Server
-	ignore   GlobalIgnore
+	ignore   ignorer.GlobalIgnore
 
 	ctx           context.Context
 	cancel        context.CancelFunc
@@ -66,7 +67,7 @@ func New(socketLocation, root string, mode fslist.Mode) (*FSCache, error) {
 		ctx:       ctx,
 		closeOnce: &sync.Once{},
 		wg:        &sync.WaitGroup{},
-		ignore:    NewGlobalIgnore(root),
+		ignore:    ignorer.NewGlobalIgnore(),
 	}
 
 	proto.RegisterFSCacheServer(fs.server, fs)
