@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/google/subcommands"
+	listignores "github.com/keyneston/fscache/cmds/list-ignores"
 	"github.com/keyneston/fscache/cmds/read"
 	"github.com/keyneston/fscache/cmds/run"
 	"github.com/keyneston/fscache/cmds/stop"
@@ -22,6 +23,7 @@ func main() {
 	subcommands.Register(&run.Command{Config: sharedConf}, "")
 	subcommands.Register(&read.Command{Config: sharedConf}, "")
 	subcommands.Register(&stop.Command{Config: sharedConf}, "")
+	subcommands.Register(&listignores.Command{Config: sharedConf}, "")
 
 	flag.Parse()
 	ctx := context.Background()

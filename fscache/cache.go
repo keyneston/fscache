@@ -1,13 +1,11 @@
 package fscache
 
 import (
-	"bytes"
 	"context"
 	"net"
 	"os"
 	"os/signal"
 	"path/filepath"
-	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -16,7 +14,6 @@ import (
 	"github.com/keyneston/fscache/internal/shared"
 	"github.com/keyneston/fscache/proto"
 	"github.com/keyneston/fscache/watcher"
-	"github.com/monochromegane/go-gitignore"
 	"github.com/rs/zerolog"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -25,17 +22,6 @@ import (
 var DefaultFlushTime = time.Second * 1
 
 var _ proto.FSCacheServer = &FSCache{}
-
-const watchIgnores = `
-.git/
-.svn/
-Application Support/
-.cache/
-.DS_File
-pkg/mod
-pkg/sumdb
-pkg/mod
-`
 
 type FSCache struct {
 	proto.UnimplementedFSCacheServer
@@ -46,7 +32,7 @@ type FSCache struct {
 	watcher  watcher.Watcher
 	socket   net.Listener
 	server   *grpc.Server
-	ignore   gitignore.IgnoreMatcher
+	ignore   GlobalIgnore
 
 	ctx           context.Context
 	cancel        context.CancelFunc
@@ -80,7 +66,7 @@ func New(socketLocation, root string, mode fslist.Mode) (*FSCache, error) {
 		ctx:       ctx,
 		closeOnce: &sync.Once{},
 		wg:        &sync.WaitGroup{},
-		ignore:    gitignore.NewGitIgnoreFromReader("/", bytes.NewBufferString(watchIgnores)),
+		ignore:    NewGlobalIgnore(root),
 	}
 
 	proto.RegisterFSCacheServer(fs.server, fs)
@@ -148,25 +134,8 @@ func eventToAddData(e watcher.Event) fslist.AddData {
 	}
 }
 
-func checkSkipPath(ignore gitignore.IgnoreMatcher, path string, dir bool) bool {
-	// TODO: find a better way:
-	segments := strings.Split(path, "/")
-	for i := range segments {
-		if i != 0 {
-			dir = true
-		}
-
-		path = strings.Join(segments[0:i], "/")
-		if ignore.Match(path, dir) {
-			return true
-		}
-	}
-
-	return false
-}
-
 func (fs *FSCache) handleEvent(e watcher.Event) {
-	if checkSkipPath(fs.ignore, e.Path, e.Dir) {
+	if fs.ignore.Match(e.Path, e.Dir) {
 		fs.logger.Debug().Msgf("Skipping %#q", e.Path)
 		return
 	}
