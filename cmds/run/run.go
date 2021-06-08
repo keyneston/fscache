@@ -9,6 +9,8 @@ import (
 	"syscall"
 
 	"github.com/google/subcommands"
+	daemon "github.com/sevlyar/go-daemon"
+
 	"github.com/keyneston/fscache/fscache"
 	"github.com/keyneston/fscache/fslist"
 	"github.com/keyneston/fscache/internal/shared"
@@ -17,8 +19,9 @@ import (
 type Command struct {
 	*shared.Config
 
-	root string
-	mode string
+	root      string
+	mode      string
+	daemonize bool
 }
 
 func (*Command) Name() string     { return "run" }
@@ -34,6 +37,7 @@ func (c *Command) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&c.root, "r", "", "Root directory to monitor")
 	f.StringVar(&c.root, "root", "", "Alias for -r")
 	f.StringVar(&c.mode, "mode", "pebble", "DB mode; experimental")
+	f.BoolVar(&c.daemonize, "daemonize", false, "Launch as a daemon")
 }
 
 func (c *Command) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
@@ -49,6 +53,14 @@ func (c *Command) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) 
 	socketLoc, err := c.SocketLocation()
 	if err != nil {
 		return shared.Exitf("Unable to get socket location: %v", err)
+	}
+
+	if c.daemonize {
+		daemonCtx := daemon.Context{}
+		child, _ := daemonCtx.Reborn()
+		if child != nil {
+			return subcommands.ExitSuccess
+		}
 	}
 
 	pid, err := shared.NewPID(c.PIDFile, c.root, socketLoc)
